@@ -500,7 +500,7 @@ if (!empty($notification_email)) {
                                           . '<table style="width:100%;border-collapse:collapse;margin:15px 0;">'
                                           . '<tr><td colspan="2" style="padding:8px;background:#1e3d59;color:#fff;font-weight:bold;">Vertragsdaten</td></tr>'
                                           . '<tr><td style="padding:4px 8px;color:#666;">Vertrag:</td><td style="padding:4px 8px;">' . esc_html($contract_details['trainingsumfang'] ?? '-') . '</td></tr>'
-                                          . '<tr><td style="padding:4px 8px;color:#666;">Monatsbeitrag:</td><td style="padding:4px 8px;">' . esc_html($contract_details['vertrag_preis'] ?? '-') . ' CHF</td></tr>'
+                                          . '<tr><td style="padding:4px 8px;color:#666;">Monatsbeitrag:</td><td style="padding:4px 8px;">' . esc_html($contract_details['vertrag_preis'] ?? '-') . ' ' . get_woocommerce_currency() . '</td></tr>'
                                           . $event_info
                                           . '</table>'
                                           . '<p style="color:#666;font-size:12px;">Der Vertrag ist als PDF angehängt. Der Bestandskunde wurde im System als "Bestandskunde akzeptiert" markiert.</p>'
