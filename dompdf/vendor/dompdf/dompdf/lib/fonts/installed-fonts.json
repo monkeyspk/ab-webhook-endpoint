@@ -1,0 +1,7 @@
+{
+    "roboto": {
+        "normal": "\/home\/parkour\/www\/berlin.parkourone.com\/wp-content\/plugins\/ab-webhook-endpoint\/dompdf\/vendor\/dompdf\/dompdf\/lib\/fonts\/roboto_normal_11c232254ea6efec4f31dae0e1c50f76",
+        "500": "\/home\/parkour\/www\/berlin.parkourone.com\/wp-content\/plugins\/ab-webhook-endpoint\/dompdf\/vendor\/dompdf\/dompdf\/lib\/fonts\/roboto_500_d32c5c759ce09d6a0f1b4ea221ff19eb",
+        "bold": "roboto_bold_215f77cb0c0c3f339396c6c63cc3cadb"
+    }
+}

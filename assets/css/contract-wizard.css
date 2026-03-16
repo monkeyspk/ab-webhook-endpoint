@@ -1,0 +1,725 @@
+/* Container Layout */
+.contract-wizard-container {
+    display: flex;
+    gap: 2rem;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Wizard Steps */
+.wizard-steps {
+   flex: 2;
+   min-width: 0;
+}
+
+/* Contract Overview */
+.contract-overview {
+   flex: 1;
+   min-width: 300px;
+   background: #fff;
+   border-radius: 8px;
+   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+   position: sticky;
+   top: 2rem;
+   overflow: hidden;
+   padding: 1.5rem;
+   height: fit-content;
+}
+
+/* Mobile Layout Anpassungen */
+@media (max-width: 768px) {
+    .contract-wizard-container {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .contract-overview {
+        position: static;
+        min-width: 100%;
+        margin-top: 1rem;
+    }
+
+    .wizard-steps {
+        width: 100%;
+    }
+}
+
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+/* ----------------------------------- OVERVIEW LAYOUT -------------------------------------- */
+
+
+.overview-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Bild-Vorschau im Backend */
+.image-preview-container {
+    width: 300px;
+    height: 200px;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-top: 10px;
+    background-color: #f0f0f0;
+}
+.image-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 10px;
+}
+
+/* Bild im Frontend (Contract Overview) */
+.overview-image-container {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+.overview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 10px;
+margin-bottom:15px;
+}
+
+.contract-overview h2 {
+    font-size: 1.5rem;
+    color: #1e3d59;
+    margin: 0 0 1rem 0;
+}
+
+.overview-price {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.overview-price h3 {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1e3d59;
+}
+
+.overview-details {
+    padding: 1.5rem 0;
+}
+
+.overview-details h4 {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.overview-detail {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.overview-detail:last-child {
+    border-bottom: none;
+}
+
+.overview-detail-label {
+    color: #666;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.overview-detail-value {
+    font-weight: 600;
+    color: #1e3d59;
+}
+
+
+
+
+
+
+
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+/* ----------------------------------- Progress Bar -------------------------------------- */
+
+
+.contract-wizard-progress {
+    flex: 2;
+    min-width: 0;
+    margin: 2em 0;
+    padding: 1em;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    position: relative;
+}
+
+.progress-steps::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.progress-steps li {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    background: white;
+    min-width: 50px;
+    padding: 0 5px;
+    list-style: none;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    display: block;
+    margin: 0 auto 5px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    line-height: 30px;
+    color: #666;
+}
+
+.step-name {
+   font-size: 0.9em;
+   color: #666;
+}
+
+/* Angepasste Mobile Styles für Progress Steps */
+@media (max-width: 768px) {
+    .progress-steps {
+        justify-content: space-evenly;
+    }
+
+    .step-name {
+        font-size: 0.8em;
+        display: none;
+    }
+
+    .step-number {
+        width: 25px;
+        height: 25px;
+        line-height: 25px;
+        font-size: 0.9em;
+    }
+}
+
+
+/* Multi-Step Navigation */
+.contract-wizard-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+@media (max-width: 768px) {
+    .contract-wizard-navigation {
+        margin-top: 1rem;
+    }
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.button-primary {
+    background: #1e3d59;
+    color: white;
+    border: none;
+}
+
+.button-primary:hover {
+    background: #152c40;
+}
+
+/* Active and Complete States */
+.progress-steps li.active .step-number {
+    background: #1e3d59;
+    color: white;
+}
+
+.progress-steps li.completed .step-number {
+    background: #4CAF50;
+    color: white;
+}
+
+
+
+
+
+
+
+
+
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+/* ----------------------------------------------------- FORM STYLES -----------------------------------------*/
+
+
+
+/* Form Styles */
+.contract-wizard-form {
+    max-width: 800px;
+    margin: 2em auto;
+}
+
+@media (max-width: 768px) {
+    .contract-wizard-form {
+        margin: 1em auto;
+    }
+}
+
+.form-row {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    font-size: 1rem;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    background: transparent;
+    transition: border-bottom-color 0.3s ease;
+}
+
+
+.form-row input[type="text"]:focus,
+.form-row input[type="email"]:focus,
+.form-row input[type="date"]:focus {
+    border-bottom-color: #1e3d59;
+    border-radius: 0px;
+
+}
+
+
+.form-row input[type="tel"] {
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 1rem;
+    width: 100%;
+    transition: border-color 0.3s;
+}
+
+.form-row input[type="tel"]:focus {
+    border-color: #1e3d59;
+    outline: none;
+}
+
+.contract-paragraph {
+    font-size: 1rem; /* Standardgröße für Text */
+    line-height: 1.6; /* Angenehme Lesbarkeit */
+    color: #333; /* Neutrale Textfarbe */
+    margin-bottom: 1rem; /* Abstand nach unten */
+}
+
+
+
+.contract-wizard-form input[type="text"],
+.contract-wizard-form input[type="email"],
+.contract-wizard-form input[type="tel"],
+.contract-wizard-form input[type="password"],
+.contract-wizard-form textarea {
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    width: 100%;
+    font-size: 1rem;
+    transition: border-bottom-color 0.3s ease;
+    color: #333;
+    border-radius: 0;
+    -webkit-border-radius: 0;
+    -webkit-appearance: none;
+}
+
+.contract-wizard-form select {
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  padding: 10px 0;
+  width: 100%;
+  font-size: 1rem;
+  transition: border-bottom-color 0.3s ease;
+  color: #333;
+  border-radius: 0;
+  -webkit-border-radius: 0;
+  -webkit-appearance: none;
+}
+
+
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+/* ------------------------------------------ Zweispaltiges Layout --------------------------------------------------*/
+
+/* Zweispaltiges Layout */
+.form-row-split {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Basis Spalten-Styles */
+.form-col {
+    flex: 1 1 130px;
+}
+
+.form-col-wide {
+    flex: 3 1 280px;
+}
+
+.form-col-narrow {
+    flex: 0 0 120px; /* Fixe Breite für schmale Spalten wie Hausnummer und PLZ */
+}
+
+/* Flex Layout für nebeneinander liegende Felder */
+.form-row-flex {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Label Styles */
+.form-row label,
+.form-col label,
+.form-col-narrow label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Input Styles */
+.form-col input,
+.form-col-narrow input,
+.form-row input,
+select,
+textarea {
+    width: 100%;
+    font-size: 1rem;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    background: transparent;
+    transition: border-bottom-color 0.3s ease;
+}
+
+
+
+
+/* Normale Form-Row für einzelne Felder */
+.form-row {
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    /* Super spezifischer Selektor */
+
+
+    .form-row-flex-data {
+     flex-direction: column;
+ }
+
+ .form-row-flex-data .contact-field {
+     width: 100%;
+ }
+    .contract-wizard-container .form-row-flex .contact-field {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Alternative Option */
+    .contact-field {
+        width: 100% !important;
+        flex-basis: 100% !important;
+    }
+}
+
+/* -------------------------------------------- CHECKBOX ------------------------------------------*/
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+/* Standard-Checkbox unsichtbar machen */
+.checkbox-container input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 24px;  /* Fixierte Größe */
+    height: 24px;
+    border: 2px solid #1e3d59;
+    border-radius: 4px;
+    background-color: white;
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    flex-shrink: 0; /* Verhindert Verkleinern auf kleinen Screens */
+}
+
+/* Checkbox bleibt auf Mobile fix */
+@media (max-width: 768px) {
+    .checkbox-container input[type="checkbox"] {
+        width: 24px !important;
+        height: 24px !important;
+        flex-shrink: 0 !important;
+    }
+}
+
+/* Checkbox Effekt beim Aktivieren */
+.checkbox-container input[type="checkbox"]:checked {
+    background-color: #1e3d59;
+    border-color: #1e3d59;
+}
+
+/* Haken-Styling */
+.checkbox-container input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 5px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg);
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    transform: translate(-50%, -60%) rotate(-45deg);
+}
+
+/* Haken sichtbar machen */
+.checkbox-container input[type="checkbox"]:checked::after {
+    opacity: 1;
+}
+
+/* Label Styling */
+.checkbox-container label {
+    font-size: 1rem;
+    color: #333;
+    cursor: pointer;
+    flex: 1; /* Verhindert, dass das Label die Checkbox zusammendrückt */
+}
+
+
+
+
+
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+/* ------------------------------------------ AKKORDEON --------------------------------------------------*/
+
+
+.accordion {
+    margin-top: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1),
+                0 4px 6px rgba(0,0,0,0.05);
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+        margin-bottom: 20px;
+}
+
+
+
+
+.accordion:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12),
+                0 6px 12px rgba(0,0,0,0.08);
+}
+
+.accordion-toggle {
+    cursor: pointer;
+    padding: 1.25rem;
+    text-align: left;
+    border: none;
+    width: 100%;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(26, 115, 232, 0.04);
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+}
+
+.accordion-toggle:hover {
+    background: rgba(26, 115, 232, 0.08);
+}
+
+.accordion-toggle::after {
+    content: '▶';
+    font-size: 0.8rem;
+    color: #5f6368;
+    transition: transform 0.3s ease;
+}
+
+.accordion-toggle.open::after {
+    transform: rotate(90deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 1.25rem;
+    color: #5f6368;
+    line-height: 1.6;
+    visibility: hidden;
+}
+
+.accordion-content.open {
+    max-height: none;
+    height: auto;
+    padding: 1.25rem;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    visibility: visible;
+    transition: visibility 0s 0.3s;
+}
+
+
+
+
+.accordion-step4 {
+    margin-top: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1),
+                0 4px 6px rgba(0,0,0,0.05);
+    transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+    margin-bottom: 20px;
+    padding:1.25rem;
+}
+
+
+.accordion-step4-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #5f6368;
+    line-height: 1.6;
+}
+
+.accordion-step4-content.open {
+    max-height: 1000px;
+
+}
+
+
+/* ---------------------------- WIZARD VERTTRAG ABSCHLIESSEN SPINNER ------------------- */
+
+.spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border .75s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}
+
+.contract-submit-btn:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+}

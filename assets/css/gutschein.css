@@ -1,0 +1,272 @@
+/* =============================================
+   AB Gutschein - Frontend Styles
+   ============================================= */
+
+.ab-gutschein-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+/* Header */
+.ab-gutschein-header h2 {
+    color: #1e3d59;
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.ab-gutschein-subtitle {
+    color: #666;
+    font-size: 1rem;
+    margin: 0 0 2rem 0;
+}
+
+/* Labels */
+.ab-gutschein-label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+/* Preset Amount Buttons */
+.ab-gutschein-preset-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.ab-gutschein-amount-btn {
+    flex: 1 1 0;
+    min-width: 80px;
+    padding: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    border: 2px solid #1e3d59;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e3d59;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    line-height: 1;
+}
+
+.ab-gutschein-amount-btn:hover {
+    background: rgba(30, 61, 89, 0.05);
+}
+
+.ab-gutschein-amount-btn.selected {
+    background: #1e3d59;
+    color: #fff;
+}
+
+/* Custom Amount Input */
+.ab-gutschein-custom-amount {
+    margin-bottom: 0.5rem;
+}
+
+.ab-gutschein-custom-amount label {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.ab-gutschein-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ab-gutschein-input-group input {
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    background: transparent;
+    transition: border-bottom-color 0.3s ease;
+    width: 150px;
+    outline: none;
+}
+
+.ab-gutschein-input-group input:focus {
+    border-bottom-color: #1e3d59;
+}
+
+.ab-gutschein-input-group input::placeholder {
+    font-weight: 400;
+    color: #aaa;
+}
+
+.ab-gutschein-currency {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e3d59;
+}
+
+/* Recipient Section */
+.ab-gutschein-recipient {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+}
+
+.ab-gutschein-form-row {
+    margin-bottom: 1.5rem;
+}
+
+.ab-gutschein-form-row label {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.ab-gutschein-form-row input,
+.ab-gutschein-form-row textarea {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    font-size: 1rem;
+    background: transparent;
+    transition: border-bottom-color 0.3s ease;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.ab-gutschein-form-row input:focus,
+.ab-gutschein-form-row textarea:focus {
+    border-bottom-color: #1e3d59;
+}
+
+.ab-gutschein-form-row input::placeholder,
+.ab-gutschein-form-row textarea::placeholder {
+    color: #aaa;
+}
+
+/* Preview Card */
+.ab-gutschein-preview {
+    margin: 2rem 0;
+}
+
+.ab-gutschein-card {
+    background: linear-gradient(135deg, #1e3d59 0%, #2a5f8f 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(30, 61, 89, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.ab-gutschein-card:hover {
+    transform: translateY(-2px);
+}
+
+.ab-gutschein-card-label {
+    display: block;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+}
+
+.ab-gutschein-card-amount {
+    display: block;
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.ab-gutschein-card-brand {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+    letter-spacing: 1px;
+}
+
+/* Add to Cart Button */
+.ab-gutschein-actions {
+    margin-top: 2rem;
+}
+
+#ab-gutschein-add-to-cart {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    background: #1e3d59;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    line-height: 1.4;
+}
+
+#ab-gutschein-add-to-cart:hover:not(:disabled) {
+    background: #152c40;
+}
+
+#ab-gutschein-add-to-cart:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#ab-gutschein-add-to-cart.loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* Feedback */
+.ab-gutschein-feedback {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.ab-gutschein-feedback.success {
+    background: #edfaef;
+    color: #00a32a;
+    border: 1px solid #00a32a;
+}
+
+.ab-gutschein-feedback.error {
+    background: #fef0f0;
+    color: #d63638;
+    border: 1px solid #d63638;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ab-gutschein-container {
+        padding: 1rem;
+    }
+
+    .ab-gutschein-preset-buttons {
+        gap: 0.5rem;
+    }
+
+    .ab-gutschein-amount-btn {
+        padding: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .ab-gutschein-card-amount {
+        font-size: 2rem;
+    }
+
+    .ab-gutschein-header h2 {
+        font-size: 1.4rem;
+    }
+}
