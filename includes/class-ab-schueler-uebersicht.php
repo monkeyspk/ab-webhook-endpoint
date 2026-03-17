@@ -13,6 +13,57 @@ class AB_Schueler_Uebersicht {
         add_action('admin_menu', [__CLASS__, 'add_menu_page']);
         add_action('admin_init', [__CLASS__, 'handle_csv_download']);
         add_action('admin_init', [__CLASS__, 'handle_zip_download']);
+        add_action('admin_init', [__CLASS__, 'backfill_contract_dates']);
+    }
+
+    /**
+     * Einmalig: Für bestehende Bestellungen mit abgeschlossenem Vertrag das Datum nachträglich setzen.
+     * Ermittelt das Datum aus den Order-Notes (Statusänderung auf schuelerin/bestandkundeakz).
+     */
+    public static function backfill_contract_dates() {
+        if (get_option('ab_contract_dates_backfilled')) {
+            return;
+        }
+
+        $orders = wc_get_orders([
+            'status' => ['schuelerin', 'bestandkundeakz'],
+            'limit'  => -1,
+            'return' => 'ids',
+        ]);
+
+        foreach ($orders as $order_id) {
+            $existing = get_post_meta($order_id, '_ab_contract_completion_date', true);
+            if (!empty($existing)) {
+                continue;
+            }
+
+            // Versuche Datum aus Order-Notes zu ermitteln
+            $notes = wc_get_order_notes(['order_id' => $order_id, 'type' => 'internal']);
+            $completion_date = '';
+
+            foreach ($notes as $note) {
+                // Suche nach Statusänderung auf schuelerin oder bestandkundeakz
+                if (preg_match('/(schuelerin|bestandkundeakz|Bestandskunde akzeptiert|Bestandskunde-Vertrag abgeschlossen)/i', $note->content)) {
+                    $completion_date = $note->date_created->date('Y-m-d H:i:s');
+                    break;
+                }
+            }
+
+            // Fallback: Datum der letzten Statusänderung der Order
+            if (empty($completion_date)) {
+                $order = wc_get_order($order_id);
+                if ($order) {
+                    $completion_date = $order->get_date_modified() ? $order->get_date_modified()->date('Y-m-d H:i:s') : '';
+                }
+            }
+
+            if (!empty($completion_date)) {
+                update_post_meta($order_id, '_ab_contract_completion_date', $completion_date);
+            }
+        }
+
+        update_option('ab_contract_dates_backfilled', true);
+        error_log('[AB Schüler] Backfill abgeschlossen für ' . count($orders) . ' Bestellungen');
     }
 
     public static function add_menu_page() {
@@ -95,12 +146,21 @@ class AB_Schueler_Uebersicht {
         $email = !empty($contract_data['email']) ? $contract_data['email'] : $order->get_billing_email();
         $geburtsdatum = !empty($contract_data['geburtsdatum']) ? $contract_data['geburtsdatum'] : '';
 
+        // Dabei seit: Vertragsabschluss-Datum ermitteln
+        $dabei_seit = get_post_meta($order_id, '_ab_contract_completion_date', true);
+        if (!empty($dabei_seit)) {
+            $dabei_seit = date_i18n('d.m.Y', strtotime($dabei_seit));
+        } else {
+            $dabei_seit = '';
+        }
+
         return [
             'order_id'     => $order_id,
             'vorname'      => $vorname,
             'nachname'     => $nachname,
             'email'        => $email,
             'geburtsdatum' => $geburtsdatum,
+            'dabei_seit'   => $dabei_seit,
             'status'       => $order->get_status(),
             'has_pdf'      => self::has_valid_pdf($order_id),
             'pdf_url'      => self::get_pdf_url($order_id),
@@ -148,7 +208,7 @@ class AB_Schueler_Uebersicht {
         // BOM für Excel UTF-8
         fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-        fputcsv($output, ['Klasse', 'Vorname', 'Nachname', 'E-Mail', 'Geburtsdatum', 'Vertrag', 'Bestellnummer', 'Status'], ';');
+        fputcsv($output, ['Klasse', 'Vorname', 'Nachname', 'E-Mail', 'Geburtsdatum', 'Dabei seit', 'Vertrag', 'Bestellnummer', 'Status'], ';');
 
         foreach ($classes as $class_name => $students) {
             if ($filter_class && $class_name !== $filter_class) {
@@ -162,6 +222,7 @@ class AB_Schueler_Uebersicht {
                     $student['nachname'],
                     $student['email'],
                     $student['geburtsdatum'],
+                    $student['dabei_seit'],
                     $student['has_pdf'] ? 'Ja' : 'Nein',
                     $student['order_id'],
                     $status_label,
@@ -423,17 +484,18 @@ class AB_Schueler_Uebersicht {
                     <table class="wp-list-table widefat fixed striped ab-su-table">
                         <thead>
                             <tr>
-                                <th style="width: 22%;">Name</th>
-                                <th style="width: 22%;">E-Mail</th>
-                                <th style="width: 12%;">Geburtsdatum</th>
-                                <th style="width: 14%;">Status</th>
-                                <th style="width: 8%;">PDF</th>
+                                <th style="width: 20%;">Name</th>
+                                <th style="width: 20%;">E-Mail</th>
+                                <th style="width: 10%;">Geburtsdatum</th>
+                                <th style="width: 10%;">Dabei seit</th>
+                                <th style="width: 12%;">Status</th>
+                                <th style="width: 6%;">PDF</th>
                                 <th style="width: 22%;">Aktion</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($students)): ?>
-                                <tr><td colspan="6">Keine Schüler in dieser Klasse.</td></tr>
+                                <tr><td colspan="7">Keine Schüler in dieser Klasse.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($students as $order_id => $student):
                                     $status_label = $student['status'] === 'schuelerin' ? 'Schüler_in' : 'Bestandskunde';
@@ -449,6 +511,7 @@ class AB_Schueler_Uebersicht {
                                         </td>
                                         <td><?php echo esc_html($student['email']); ?></td>
                                         <td><?php echo esc_html($student['geburtsdatum']); ?></td>
+                                        <td><?php echo esc_html($student['dabei_seit']); ?></td>
                                         <td>
                                             <span class="ab-su-status <?php echo $status_class; ?>">
                                                 <?php echo esc_html($status_label); ?>

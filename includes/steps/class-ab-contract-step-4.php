@@ -272,6 +272,7 @@ class AB_Contract_Step_4 {
             // Fix: Korrekter Meta-Key für PDF-Pfad (konsistent mit email-sender.php)
             update_post_meta($order_id, '_ab_contract_pdf', $pdf_path);
             update_post_meta($order_id, '_contract_status', 'completed');
+            update_post_meta($order_id, '_ab_contract_completion_date', current_time('mysql'));
 
             // Bankdaten auch als separate Order-Meta-Felder speichern für WooCommerce-Ansicht
             if (!empty($contract_data['iban'])) {
