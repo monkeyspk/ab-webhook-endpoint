@@ -35,6 +35,12 @@ class AB_Admin_Menu_Organizer {
                 'ab-settings',
             ]
         ],
+        'system' => [
+            'label' => 'System',
+            'items' => [
+                'parkourone-updates',
+            ]
+        ],
     ];
 
     public static function init() {
