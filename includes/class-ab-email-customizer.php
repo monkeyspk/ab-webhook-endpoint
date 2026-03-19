@@ -259,6 +259,65 @@ if ($status_key === 'bestandkundeakz') {
         );
 
         // =============================================
+        // Bestandskunde Vertrag 2. Erinnerung
+        // =============================================
+
+        add_settings_section(
+            'ab_email_section_bestandskunde_reminder_2',
+            'Bestandskunde Vertrag — 2. Erinnerung',
+            function() { echo '<hr><p>Zweite Erinnerungsmail, falls der Kunde nach der ersten Erinnerung den Vertrag immer noch nicht abgeschlossen hat.</p>'; },
+            'ab_email_customizer'
+        );
+
+        add_settings_field(
+            'send_email_bestandskunde_reminder_2',
+            '2. Erinnerung aktivieren',
+            [$this, 'render_checkbox_field'],
+            'ab_email_customizer',
+            'ab_email_section_bestandskunde_reminder_2',
+            ['key' => 'send_email_bestandskunde_reminder_2']
+        );
+
+        add_settings_field(
+            'bestandskunde_reminder_2_days',
+            '2. Erinnerung nach X Tagen',
+            [$this, 'render_number_field'],
+            'ab_email_customizer',
+            'ab_email_section_bestandskunde_reminder_2',
+            ['key' => 'bestandskunde_reminder_2_days', 'min' => 1, 'max' => 90, 'default' => 14]
+        );
+
+        add_settings_field(
+            'subject_bestandskunde_reminder_2',
+            'E-Mail Betreff',
+            [$this, 'render_text_field'],
+            'ab_email_customizer',
+            'ab_email_section_bestandskunde_reminder_2',
+            ['key' => 'subject_bestandskunde_reminder_2', 'placeholder' => 'Letzte Erinnerung: Vertrag noch offen']
+        );
+
+        add_settings_field(
+            'header_bestandskunde_reminder_2',
+            'Überschrift',
+            [$this, 'render_text_field'],
+            'ab_email_customizer',
+            'ab_email_section_bestandskunde_reminder_2',
+            ['key' => 'header_bestandskunde_reminder_2', 'placeholder' => 'Vertrag noch immer offen']
+        );
+
+        add_settings_field(
+            'content_bestandskunde_reminder_2',
+            'E-Mail Inhalt',
+            [$this, 'render_wysiwyg_field'],
+            'ab_email_customizer',
+            'ab_email_section_bestandskunde_reminder_2',
+            [
+                'key' => 'content_bestandskunde_reminder_2',
+                'placeholder' => "Hallo {first_name},\n\nwir haben dir bereits mehrfach einen Vertrag zugeschickt. Bitte schliesse diesen zeitnah ab, damit du weiterhin am Training teilnehmen kannst.\n\nBei Fragen melde dich gerne bei uns."
+            ]
+        );
+
+        // =============================================
         // Workshop E-Mail Sektionen
         // =============================================
 
@@ -795,6 +854,45 @@ if ($status_key === 'bestandkundeakz') {
                                     <tr>
                                         <th scope="row">E-Mail Inhalt</th>
                                         <td><?php $this->render_wysiwyg_field(['key' => 'content_bestandskunde_reminder', 'placeholder' => "Hallo {first_name},\n\nwir haben dir vor einigen Tagen einen Vertrag zugeschickt, den du noch nicht abgeschlossen hast.\n\nBitte nutze den Link in unserer vorherigen E-Mail um deinen Vertrag auszufüllen.\n\nBei Fragen melde dich gerne bei uns."]); ?></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <?php
+                        // Bestandskunde Vertrag 2. Erinnerung
+                        $bk_reminder_2_key = 'bestandskunde_reminder_2';
+                        $bk_reminder_2_label = 'Bestandskunde Vertrag — 2. Erinnerung';
+                        $is_active_2 = !empty($options['send_email_' . $bk_reminder_2_key]);
+                        ?>
+                        <div class="email-template-accordion accordion-container">
+                          <div class="accordion-header <?php echo $is_active_2 ? 'is-active-email' : ''; ?>">
+                            <?php echo esc_html($bk_reminder_2_label); ?>
+                            <?php if ($is_active_2): ?>
+                                <span class="status-indicator">Aktiv</span>
+                            <?php endif; ?>
+                          </div>
+                            <div class="accordion-content">
+                                <table class="form-table">
+                                    <tr>
+                                        <th scope="row">2. Erinnerung aktivieren</th>
+                                        <td><?php $this->render_checkbox_field(['key' => 'send_email_bestandskunde_reminder_2']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">2. Erinnerung nach X Tagen</th>
+                                        <td><?php $this->render_number_field(['key' => 'bestandskunde_reminder_2_days', 'default' => 14, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die 2. Erinnerung gesendet werden? (muss grösser sein als die 1. Erinnerung)']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Betreff</th>
+                                        <td><?php $this->render_text_field(['key' => 'subject_bestandskunde_reminder_2', 'placeholder' => 'Letzte Erinnerung: Vertrag noch offen']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Überschrift</th>
+                                        <td><?php $this->render_text_field(['key' => 'header_bestandskunde_reminder_2', 'placeholder' => 'Vertrag noch immer offen']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Inhalt</th>
+                                        <td><?php $this->render_wysiwyg_field(['key' => 'content_bestandskunde_reminder_2', 'placeholder' => "Hallo {first_name},\n\nwir haben dir bereits mehrfach einen Vertrag zugeschickt. Bitte schliesse diesen zeitnah ab, damit du weiterhin am Training teilnehmen kannst.\n\nBei Fragen melde dich gerne bei uns."]); ?></td>
                                     </tr>
                                 </table>
                             </div>

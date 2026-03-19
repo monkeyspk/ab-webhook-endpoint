@@ -55,6 +55,45 @@ class AB_Contract_Admin_Panel {
         $user_ip = get_post_meta($order->get_id(), '_contract_user_ip', true);
 
 
+        // Vertragslink-Sektion (immer anzeigen, auch wenn kein Vertrag abgeschlossen)
+        $contract_token = get_post_meta($order->get_id(), '_ab_contract_token', true);
+        $wizard_page_url = home_url('/vertrag/');
+
+        // Admin-Aktion: Neuen Token generieren
+        if (isset($_GET['ab_generate_contract_token']) && $_GET['ab_generate_contract_token'] == $order->get_id()) {
+            if (wp_verify_nonce($_GET['_wpnonce'] ?? '', 'ab_generate_token_' . $order->get_id())) {
+                $contract_token = wp_generate_password(32, false);
+                update_post_meta($order->get_id(), '_ab_contract_token', $contract_token);
+                $order->add_order_note('Vertragslink manuell generiert durch Admin.');
+            }
+        }
+
+        if ($contract_token) {
+            $contract_url = add_query_arg([
+                'order_id' => $order->get_id(),
+                'step'     => 1,
+                'token'    => $contract_token
+            ], $wizard_page_url);
+        }
+
+        echo '<div style="background: #f0f6fc; border: 1px solid #c8d7e1; border-radius: 4px; padding: 15px; margin-bottom: 15px;">';
+        echo '<h4 style="margin-top: 0;">Vertragslink für Kunden</h4>';
+
+        if (!empty($contract_token)) {
+            echo '<p><input type="text" readonly class="regular-text" value="' . esc_attr($contract_url) . '" onclick="this.select();" style="width: 100%;"></p>';
+            echo '<p style="color: #666; font-size: 12px;">Diesen Link dem Kunden senden, damit er den Vertrag online ausfüllen kann.</p>';
+        } else {
+            echo '<p style="color: #999;">Noch kein Vertragslink generiert.</p>';
+        }
+
+        $generate_url = wp_nonce_url(
+            add_query_arg('ab_generate_contract_token', $order->get_id()),
+            'ab_generate_token_' . $order->get_id()
+        );
+        $button_label = $contract_token ? 'Neuen Link generieren' : 'Vertragslink generieren';
+        echo '<a href="' . esc_url($generate_url) . '" class="button" onclick="return confirm(\'Neuen Token generieren? Der alte Link wird ungültig.\');">' . $button_label . '</a>';
+        echo '</div>';
+
         // Prüfen ob ein Vertrag existiert - nur auf contract_data prüfen
         if (empty($contract_data)) {
             echo '<div class="no-contract-notice">';

@@ -61,12 +61,6 @@ class AB_Bestandskunde_Reminder {
         foreach ($orders as $order) {
             $order_id = $order->get_id();
 
-            // Bereits Erinnerung gesendet?
-            if (get_post_meta($order_id, '_ab_bestandskunde_reminder_sent', true) === 'yes') {
-                $skipped++;
-                continue;
-            }
-
             // Wann wurde der Status auf bkdvertrag gesetzt?
             $status_date = self::get_status_change_date($order, 'bkdvertrag');
             if (!$status_date) {
@@ -81,18 +75,37 @@ class AB_Bestandskunde_Reminder {
 
             $status_timestamp = $status_date->getTimestamp();
 
-            // Ist die Wartezeit abgelaufen?
-            if ($status_timestamp > $threshold_date) {
-                continue; // Noch nicht lange genug
+            // 1. Erinnerung
+            if (get_post_meta($order_id, '_ab_bestandskunde_reminder_sent', true) !== 'yes') {
+                if ($status_timestamp <= $threshold_date) {
+                    $success = self::send_reminder_email($order, 1);
+                    if ($success) {
+                        update_post_meta($order_id, '_ab_bestandskunde_reminder_sent', 'yes');
+                        update_post_meta($order_id, '_ab_bestandskunde_reminder_date', current_time('mysql'));
+                        $sent++;
+                        error_log('[AB Reminder] 1. Erinnerung gesendet für Order #' . $order_id);
+                    }
+                }
+                continue;
             }
 
-            // Erinnerung senden
-            $success = self::send_reminder_email($order);
-            if ($success) {
-                update_post_meta($order_id, '_ab_bestandskunde_reminder_sent', 'yes');
-                update_post_meta($order_id, '_ab_bestandskunde_reminder_date', current_time('mysql'));
-                $sent++;
-                error_log('[AB Reminder] Erinnerung gesendet für Order #' . $order_id);
+            // 2. Erinnerung
+            $days_2 = isset($options['bestandskunde_reminder_2_days']) ? intval($options['bestandskunde_reminder_2_days']) : 0;
+            $is_enabled_2 = !empty($options['send_email_bestandskunde_reminder_2']);
+
+            if ($days_2 > 0 && $is_enabled_2 && get_post_meta($order_id, '_ab_bestandskunde_reminder_2_sent', true) !== 'yes') {
+                $threshold_date_2 = strtotime("-{$days_2} days");
+                if ($status_timestamp <= $threshold_date_2) {
+                    $success = self::send_reminder_email($order, 2);
+                    if ($success) {
+                        update_post_meta($order_id, '_ab_bestandskunde_reminder_2_sent', 'yes');
+                        update_post_meta($order_id, '_ab_bestandskunde_reminder_2_date', current_time('mysql'));
+                        $sent++;
+                        error_log('[AB Reminder] 2. Erinnerung gesendet für Order #' . $order_id);
+                    }
+                }
+            } else {
+                $skipped++;
             }
         }
 
@@ -120,7 +133,7 @@ class AB_Bestandskunde_Reminder {
     /**
      * Erinnerungs-E-Mail senden (nutzt die gleiche Infrastruktur wie alle anderen Mails)
      */
-    private static function send_reminder_email($order) {
+    private static function send_reminder_email($order, $reminder_number = 1) {
         $options = get_option('ab_email_settings', []);
 
         $to = $order->get_billing_email();
@@ -128,10 +141,16 @@ class AB_Bestandskunde_Reminder {
             return false;
         }
 
-        // E-Mail-Inhalte aus den Einstellungen
-        $subject = $options['subject_bestandskunde_reminder'] ?? 'Erinnerung: Bitte Vertrag abschließen';
-        $header_text = $options['header_bestandskunde_reminder'] ?? 'Vertrag noch offen';
-        $content = $options['content_bestandskunde_reminder'] ?? '';
+        // E-Mail-Inhalte je nach Erinnerungsnummer
+        if ($reminder_number === 2) {
+            $subject = $options['subject_bestandskunde_reminder_2'] ?? 'Letzte Erinnerung: Vertrag noch offen';
+            $header_text = $options['header_bestandskunde_reminder_2'] ?? 'Vertrag noch immer offen';
+            $content = $options['content_bestandskunde_reminder_2'] ?? '';
+        } else {
+            $subject = $options['subject_bestandskunde_reminder'] ?? 'Erinnerung: Bitte Vertrag abschließen';
+            $header_text = $options['header_bestandskunde_reminder'] ?? 'Vertrag noch offen';
+            $content = $options['content_bestandskunde_reminder'] ?? '';
+        }
 
         if (empty($content)) {
             $content = '<!-- Logo -->
@@ -189,9 +208,10 @@ class AB_Bestandskunde_Reminder {
         $success = wp_mail($to, $subject, $email_body, $headers);
 
         if ($success) {
-            $order->add_order_note(sprintf(
-                'Erinnerungs-E-Mail gesendet (Bestandskunde Vertrag noch offen).'
-            ));
+            $label = $reminder_number === 2 ? '2. Erinnerungs-E-Mail' : '1. Erinnerungs-E-Mail';
+            $order->add_order_note(
+                $label . ' gesendet (Bestandskunde Vertrag noch offen).'
+            );
         }
 
         return $success;
