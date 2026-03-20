@@ -692,6 +692,11 @@ class AB_Bestandskunden_Import {
                 $order->update_meta_data('_ab_bestandskunde_id', $ab_id);
                 $order->update_meta_data('_ab_bestandskunde_klassen', implode(', ', $klassen_names));
 
+                // Individueller Preis (für Doppelklassen-Schüler)
+                if (!empty($student['custom_price'])) {
+                    $order->update_meta_data('_ab_custom_price', sanitize_text_field($student['custom_price']));
+                }
+
                 $user = get_user_by('email', $email);
                 if ($user) {
                     $order->set_customer_id($user->ID);
@@ -1082,6 +1087,7 @@ class AB_Bestandskunden_Import {
                             <th style="width: 110px;">Geburtsdatum</th>
                             <th>E-Mail</th>
                             <th>Klasse(n)</th>
+                            <th style="width: 110px;">Ind. Preis</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1097,10 +1103,17 @@ class AB_Bestandskunden_Import {
                                         <span style="display: inline-block; background: #f0f0f1; padding: 2px 8px; border-radius: 3px; margin: 1px 0; font-size: 12px;"><?php echo esc_html($k); ?></span><br>
                                     <?php endforeach; ?>
                                 </td>
+                                <td>
+                                    <?php if (count($s['klassen']) > 1): ?>
+                                        <input type="text" class="ab-custom-price" data-ab-id="<?php echo esc_attr($s['ab_id']); ?>" placeholder="z.B. 128" style="width: 90px; background: #fff8e1; border-color: #ffe082;" />
+                                    <?php else: ?>
+                                        <span style="color: #999;">—</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         <?php if (count($students) > 20): ?>
-                            <tr><td colspan="6" style="text-align: center; color: #666;">… und <?php echo count($students) - 20; ?> weitere Schüler</td></tr>
+                            <tr><td colspan="7" style="text-align: center; color: #666;">… und <?php echo count($students) - 20; ?> weitere Schüler</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -1331,6 +1344,19 @@ class AB_Bestandskunden_Import {
                 }
 
                 var classEventMapping = getClassEventMapping();
+
+                // Custom Prices aus den Eingabefeldern lesen
+                var customPrices = {};
+                document.querySelectorAll('.ab-custom-price').forEach(function(input) {
+                    var abId = input.getAttribute('data-ab-id');
+                    var val = input.value.trim().replace(',', '.');
+                    if (val) customPrices[abId] = val;
+                });
+                students.forEach(function(s) {
+                    if (customPrices[s.ab_id]) {
+                        s.custom_price = customPrices[s.ab_id];
+                    }
+                });
 
                 // UI umschalten
                 buttonsWrap.style.display = 'none';
