@@ -1118,6 +1118,41 @@ class AB_Bestandskunden_Import {
                     </tbody>
                 </table>
 
+                <?php
+                // Alle Doppelklassen-Schüler sammeln
+                $multi_class_students = array_filter($students, function($s) { return count($s['klassen']) > 1; });
+                if (!empty($multi_class_students)):
+                ?>
+                <div style="margin-top: 30px; padding: 20px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 4px;">
+                    <h3 style="margin-top: 0;">Individuelle Preise — Doppelklassen (<?php echo count($multi_class_students); ?> Schüler)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">Diese Schüler besuchen 2+ Klassen. Trage hier den individuellen Monatspreis ein. Leer = Standard-Vertragspreis.</p>
+                    <table class="wp-list-table widefat fixed striped" style="max-width: 800px;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Klassen</th>
+                                <th style="width: 120px;">Ind. Preis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($multi_class_students as $s): ?>
+                                <tr>
+                                    <td><strong><?php echo esc_html($s['vorname'] . ' ' . $s['nachname']); ?></strong></td>
+                                    <td>
+                                        <?php foreach ($s['klassen'] as $k): ?>
+                                            <span style="display: inline-block; background: #f0f0f1; padding: 2px 8px; border-radius: 3px; margin: 1px 2px; font-size: 12px;"><?php echo esc_html($k); ?></span>
+                                        <?php endforeach; ?>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="ab-custom-price" data-ab-id="<?php echo esc_attr($s['ab_id']); ?>" placeholder="z.B. 128" style="width: 100px; background: #fff; border-color: #ffe082;" />
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+
                 <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107;">
                     <strong>Hinweis:</strong> Es werden <strong><?php echo count($students); ?> Bestellungen</strong> erstellt
                     (<?php echo $multi_class_count; ?> davon mit 2+ Klassen).
