@@ -32,7 +32,7 @@ class AB_Contract_PDF {
         // Ermitteln des Vertragstyps und der Vertragsdetails
         $contract_id = AB_Contract_Wizard::determine_contract_type( $order );
         error_log('Determined contract type: ' . $contract_id);
-        $contract_details = AB_Contract_Overview::get_contract_details( $contract_id );
+        $contract_details = AB_Contract_Overview::get_contract_details( $contract_id, $order->get_id() );
         error_log('Contract details (via AB_Contract_Overview): ' . print_r($contract_details, true));
 
         // Fallback: Falls keine Vertragsdetails vorhanden sind, ließe sich direkt über die Post-Metadaten lesen

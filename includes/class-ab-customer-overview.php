@@ -284,7 +284,7 @@ class AB_Customer_Overview {
                 $contract_id = AB_Contract_Wizard::determine_contract_type($order);
                 $contract_details = [];
                 if ($contract_id) {
-                    $contract_details = AB_Contract_Overview::get_contract_details($contract_id);
+                    $contract_details = AB_Contract_Overview::get_contract_details($contract_id, $order->get_id());
                 }
 
                 // Hole Event-Details

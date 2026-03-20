@@ -10,7 +10,7 @@ class AB_Contract_Overview {
             $order_id = intval($_GET['order_id']);
         }
 
-        $details = self::get_contract_details($contract_id);
+        $details = self::get_contract_details($contract_id, $order_id);
         $training_name = '';
 
         if ($order_id) {
@@ -65,8 +65,8 @@ class AB_Contract_Overview {
         return ob_get_clean();
     }
 
-    public static function get_contract_details($contract_id) {
-        return [
+    public static function get_contract_details($contract_id, $order_id = null) {
+        $details = [
             'vertrag_preis' => get_post_meta($contract_id, '_ab_vertrag_preis', true),
             'trainingsumfang' => get_post_meta($contract_id, '_ab_trainingsumfang', true),
             'verlaengerung' => get_post_meta($contract_id, '_ab_verlaengerung', true),
@@ -75,6 +75,16 @@ class AB_Contract_Overview {
             'event_match' => get_post_meta($contract_id, '_ab_event_description', true),
             'vertrag_bild' => get_post_meta($contract_id, '_ab_vertrag_bild', true)
         ];
+
+        // Individueller Preis überschreibt den Standard-Vertragspreis
+        if ($order_id) {
+            $custom_price = get_post_meta($order_id, '_ab_custom_price', true);
+            if ($custom_price !== '' && $custom_price !== false) {
+                $details['vertrag_preis'] = $custom_price;
+            }
+        }
+
+        return $details;
     }
 
 

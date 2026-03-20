@@ -268,7 +268,7 @@ if (!empty($notification_email)) {
           $admin_subject = 'Neuer Vertragsabschluss';
 
         $contract_id = AB_Contract_Wizard::determine_contract_type($order);
-        $contract_details = AB_Contract_Overview::get_contract_details($contract_id);
+        $contract_details = AB_Contract_Overview::get_contract_details($contract_id, $order_id);
 
         // Teilnehmerdaten holen
         $participant_info = '';
@@ -349,7 +349,7 @@ if (!empty($notification_email)) {
                                       $admin_subject = 'Neue Kündigung eingegangen';
 
                                       $contract_id = AB_Contract_Wizard::determine_contract_type($order);
-                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id);
+                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id, $order_id);
 
                                       // Teilnehmerdaten holen
                                       $participant_info = '';
@@ -427,7 +427,7 @@ if (!empty($notification_email)) {
                                       $admin_subject = 'Neuer Bestandskunde-Vertragsabschluss — Bestellung #' . $order->get_order_number();
 
                                       $contract_id = AB_Contract_Wizard::determine_contract_type($order);
-                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id);
+                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id, $order_id);
 
                                       // Teilnehmerdaten holen (aus _event_participant_data oder _ab_contract_data)
                                       $participant_info = '';
@@ -539,7 +539,7 @@ if (!empty($notification_email)) {
                                       $admin_subject = 'Kündigung initiiert';
 
                                       $contract_id = AB_Contract_Wizard::determine_contract_type($order);
-                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id);
+                                      $contract_details = AB_Contract_Overview::get_contract_details($contract_id, $order_id);
 
                                       // Teilnehmerdaten holen
                                       $participant_info = '';

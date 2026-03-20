@@ -7,6 +7,11 @@ class AB_Contract_Step_2 {
     public static function render($order, $contract_id) {
         $post_content = get_post_field('post_content', $contract_id);
         $preis = get_post_meta($contract_id, '_ab_vertrag_preis', true);
+        // Individueller Preis überschreibt Standard
+        $custom_price = get_post_meta($order->get_id(), '_ab_custom_price', true);
+        if ($custom_price !== '' && $custom_price !== false) {
+            $preis = $custom_price;
+        }
         $accordion_basic = get_post_meta($contract_id, '_ab_accordion_basic', true);
         $accordion_training = get_post_meta($contract_id, '_ab_accordion_training', true);
         $accordion_conditions = get_post_meta($contract_id, '_ab_accordion_conditions', true);

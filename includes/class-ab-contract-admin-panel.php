@@ -7,6 +7,37 @@ class AB_Contract_Admin_Panel {
     public static function init() {
         add_action('add_meta_boxes', [__CLASS__, 'add_contract_meta_box']);
         add_action('admin_init', [__CLASS__, 'handle_pdf_view']);
+        add_action('admin_init', [__CLASS__, 'handle_custom_price_save']);
+    }
+
+    public static function handle_custom_price_save() {
+        if (!isset($_POST['action']) || $_POST['action'] !== 'ab_save_custom_price') {
+            return;
+        }
+
+        $order_id = isset($_POST['order_id']) ? absint($_POST['order_id']) : 0;
+        if (!$order_id || !wp_verify_nonce($_POST['ab_custom_price_nonce'] ?? '', 'ab_custom_price_' . $order_id)) {
+            return;
+        }
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+
+        $custom_price = sanitize_text_field($_POST['ab_custom_price'] ?? '');
+
+        if ($custom_price === '') {
+            delete_post_meta($order_id, '_ab_custom_price');
+            $order = wc_get_order($order_id);
+            if ($order) $order->add_order_note('Individueller Preis entfernt — Standard-Vertragspreis wird verwendet.');
+        } else {
+            $custom_price = str_replace(',', '.', $custom_price);
+            update_post_meta($order_id, '_ab_custom_price', $custom_price);
+            $order = wc_get_order($order_id);
+            if ($order) $order->add_order_note('Individueller Preis gesetzt: ' . $custom_price . ' ' . get_woocommerce_currency_symbol());
+        }
+
+        wp_redirect(admin_url('post.php?post=' . $order_id . '&action=edit'));
+        exit;
     }
 
     public static function handle_pdf_view() {
@@ -54,6 +85,37 @@ class AB_Contract_Admin_Panel {
         $pdf_path = get_post_meta($order->get_id(), '_ab_contract_pdf', true);
         $user_ip = get_post_meta($order->get_id(), '_contract_user_ip', true);
 
+
+        // Custom Price Sektion
+        $custom_price = get_post_meta($order->get_id(), '_ab_custom_price', true);
+        $contract_type_id = get_post_meta($order->get_id(), '_ab_contract_type_id', true);
+        $standard_price = $contract_type_id ? get_post_meta($contract_type_id, '_ab_vertrag_preis', true) : '';
+
+        echo '<div style="background: #fff8e1; border: 1px solid #ffe082; border-radius: 4px; padding: 15px; margin-bottom: 15px;">';
+        echo '<h4 style="margin-top: 0;">Individueller Preis</h4>';
+
+        if ($standard_price) {
+            echo '<p style="color: #666; font-size: 12px;">Standard-Vertragspreis: <strong>' . esc_html($standard_price) . ' ' . get_woocommerce_currency_symbol() . '</strong></p>';
+        }
+
+        $save_url = wp_nonce_url(
+            add_query_arg('ab_save_custom_price', $order->get_id()),
+            'ab_custom_price_' . $order->get_id()
+        );
+
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:flex;gap:8px;align-items:center;">';
+        echo '<input type="hidden" name="action" value="ab_save_custom_price">';
+        echo '<input type="hidden" name="order_id" value="' . $order->get_id() . '">';
+        wp_nonce_field('ab_custom_price_' . $order->get_id(), 'ab_custom_price_nonce');
+        echo '<input type="text" name="ab_custom_price" value="' . esc_attr($custom_price) . '" placeholder="z.B. 128.00" style="width:120px;" />';
+        echo '<button type="submit" class="button">Speichern</button>';
+
+        if ($custom_price !== '' && $custom_price !== false) {
+            echo '<span style="color:#e65100;font-weight:bold;">Aktiv: ' . esc_html($custom_price) . ' ' . get_woocommerce_currency_symbol() . '</span>';
+        }
+        echo '</form>';
+        echo '<p style="color: #666; font-size: 11px; margin-bottom: 0;">Leer lassen = Standard-Vertragspreis wird verwendet. Überschreibt den Preis im Vertrag-Wizard und PDF.</p>';
+        echo '</div>';
 
         // Vertragslink-Sektion (immer anzeigen, auch wenn kein Vertrag abgeschlossen)
         $contract_token = get_post_meta($order->get_id(), '_ab_contract_token', true);
