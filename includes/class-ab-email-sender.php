@@ -609,6 +609,76 @@ if (!empty($notification_email)) {
     }
 }
 
+            // ZUSÄTZLICHE Benachrichtigungs-E-Mail bei Status "workshop" oder "kurs"
+            if ($new_status === 'wc-workshop' || $new_status === 'wc-kurs') {
+                $status_short = str_replace('wc-', '', $new_status);
+                $notification_email = isset($email_settings['admin_notification_' . $status_short])
+                    ? $email_settings['admin_notification_' . $status_short]
+                    : '';
+
+                if (!empty($notification_email)) {
+                    $type_label = ($new_status === 'wc-workshop') ? 'Workshop' : 'Kurs';
+                    $admin_subject = 'Neue ' . $type_label . '-Buchung — Bestellung #' . $order->get_order_number();
+
+                    $participant_info = '';
+                    $event_info = '';
+                    foreach ($order->get_items() as $item) {
+                        $participants = $item->get_meta('_event_participant_data');
+                        if (!empty($participants) && is_array($participants)) {
+                            foreach ($participants as $p) {
+                                $participant_info .= sprintf(
+                                    '<tr><td style="padding:4px 8px;color:#666;">Teilnehmer:</td><td style="padding:4px 8px;">%s %s (Geb: %s)</td></tr>',
+                                    esc_html($p['vorname'] ?? ''),
+                                    esc_html($p['name'] ?? ''),
+                                    esc_html($p['geburtsdatum'] ?? '')
+                                );
+                            }
+                        }
+                        $event_title = $item->get_meta('_event_title_clean') ?: $item->get_meta('_event_title');
+                        $event_date = $item->get_meta('_event_date');
+                        $event_time = $item->get_meta('_event_time');
+                        $event_venue = $item->get_meta('_event_venue');
+                        $event_coach = $item->get_meta('_event_coach');
+
+                        if (!empty($event_title))
+                            $event_info .= '<tr><td style="padding:4px 8px;color:#666;">' . $type_label . ':</td><td style="padding:4px 8px;">' . esc_html($event_title) . '</td></tr>';
+                        if (!empty($event_date))
+                            $event_info .= '<tr><td style="padding:4px 8px;color:#666;">Datum:</td><td style="padding:4px 8px;">' . esc_html($event_date) . (!empty($event_time) ? ' / ' . esc_html($event_time) : '') . '</td></tr>';
+                        if (!empty($event_venue))
+                            $event_info .= '<tr><td style="padding:4px 8px;color:#666;">Ort:</td><td style="padding:4px 8px;">' . esc_html($event_venue) . '</td></tr>';
+                        if (!empty($event_coach))
+                            $event_info .= '<tr><td style="padding:4px 8px;color:#666;">Coach:</td><td style="padding:4px 8px;">' . esc_html($event_coach) . '</td></tr>';
+                        break;
+                    }
+
+                    $admin_message = '<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">'
+                        . '<h2 style="color:#1e3d59;margin-bottom:5px;">Neue ' . $type_label . '-Buchung</h2>'
+                        . '<p style="color:#666;margin-top:0;">Bestellung #' . $order->get_order_number() . '</p>'
+                        . '<table style="width:100%;border-collapse:collapse;margin:15px 0;">'
+                        . '<tr><td colspan="2" style="padding:8px;background:#1e3d59;color:#fff;font-weight:bold;">Kundendaten</td></tr>'
+                        . '<tr><td style="padding:4px 8px;color:#666;">Name:</td><td style="padding:4px 8px;">' . esc_html($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()) . '</td></tr>'
+                        . '<tr><td style="padding:4px 8px;color:#666;">E-Mail:</td><td style="padding:4px 8px;">' . esc_html($order->get_billing_email()) . '</td></tr>'
+                        . '<tr><td style="padding:4px 8px;color:#666;">Telefon:</td><td style="padding:4px 8px;">' . esc_html($order->get_billing_phone()) . '</td></tr>'
+                        . $participant_info
+                        . '</table>'
+                        . '<table style="width:100%;border-collapse:collapse;margin:15px 0;">'
+                        . '<tr><td colspan="2" style="padding:8px;background:#1e3d59;color:#fff;font-weight:bold;">' . $type_label . '-Details</td></tr>'
+                        . $event_info
+                        . '</table>'
+                        . '<p style="margin-top:15px;"><a href="' . admin_url('post.php?post=' . $order_id . '&action=edit') . '" style="display:inline-block;background:#0066cc;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;">Bestellung ansehen</a></p>'
+                        . '</div>';
+
+                    $admin_headers = [
+                        'Content-Type: text/html; charset=UTF-8',
+                        'From: ' . $sender_name . ' <' . $sender_email . '>',
+                        'Reply-To: ' . $sender_name . ' <' . $sender_email . '>',
+                    ];
+
+                    wp_mail($notification_email, $admin_subject, $admin_message, $admin_headers);
+                    error_log("[AB Email] Admin-Benachrichtigung für {$type_label}-Buchung gesendet an {$notification_email} (Order #{$order_id})");
+                }
+            }
+
                           return $sent;
 
                       } catch (Exception $e) {

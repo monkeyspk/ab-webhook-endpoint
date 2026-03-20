@@ -971,6 +971,16 @@ Viele Grüsse'
                                             ]); ?>
                                         </td>
                                     </tr>
+                                    <tr>
+                                        <th scope="row">Admin-Benachrichtigung</th>
+                                        <td>
+                                            <?php $this->render_text_field([
+                                                'key' => 'admin_notification_workshop',
+                                                'placeholder' => 'admin@domain.tld'
+                                            ]); ?>
+                                            <p class="description">E-Mail-Adresse für Benachrichtigungen bei neuen Workshop-Buchungen (leer = keine Benachrichtigung).</p>
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -1024,6 +1034,64 @@ ONE for All &amp; All for ONE
 Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
+                            </div>
+                        </div>
+
+                        <?php
+                        // Workshop Coach Erinnerung
+                        $ws_coach_key = 'workshop_coach_reminder';
+                        $ws_coach_label = 'Workshop Coach Erinnerung';
+                        $is_active = !empty($options['send_email_' . $ws_coach_key]);
+                        ?>
+                        <div class="email-template-accordion accordion-container">
+                          <div class="accordion-header <?php echo $is_active ? 'is-active-email' : ''; ?>">
+                            <?php echo esc_html($ws_coach_label); ?>
+                            <?php if ($is_active): ?>
+                                <span class="status-indicator">Aktiv</span>
+                            <?php endif; ?>
+                          </div>
+                            <div class="accordion-content">
+                                <table class="form-table">
+                                    <tr>
+                                        <th scope="row">E-Mail aktivieren</th>
+                                        <td><?php $this->render_checkbox_field(['key' => 'send_email_workshop_coach_reminder']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Tage vor Workshop</th>
+                                        <td><?php $this->render_number_field(['key' => 'workshop_coach_reminder_days', 'default' => 3, 'min' => 1, 'max' => 30, 'description' => 'Wie viele Tage vor dem Workshop soll der Coach erinnert werden?']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Betreff</th>
+                                        <td><?php $this->render_text_field(['key' => 'subject_workshop_coach_reminder', 'placeholder' => 'Erinnerung: Dein Workshop steht bevor']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Überschrift</th>
+                                        <td><?php $this->render_text_field(['key' => 'header_workshop_coach_reminder', 'placeholder' => 'Workshop-Erinnerung']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Inhalt</th>
+                                        <td><?php $this->render_wysiwyg_field(['key' => 'content_workshop_coach_reminder', 'placeholder' => 'Lieber Coach,...', 'default' => 'Lieber Coach,
+
+dein Workshop steht bald an!
+
+<strong>Workshop:</strong> [ab_event_title_clean]
+<strong>Datum:</strong> [ab_event_weekday], [ab_event_date]
+<strong>Uhrzeit:</strong> [ab_event_time]
+<strong>Ort:</strong> [ab_event_location]
+
+<strong>Alle Termine:</strong>
+[ab_workshop_all_dates]
+
+<a href="[ab_google_calendar_link]" style="display:inline-block;background:#0066cc;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">Zum Google Kalender hinzufügen</a>
+
+<strong>Teilnehmer:</strong>
+[ab_event_participants]
+
+ONE for All &amp; All for ONE
+Viele Grüsse']); ?></td>
+                                    </tr>
+                                </table>
+                                <p class="description" style="padding: 0 12px 12px;">Verfügbare Platzhalter: [ab_event_title_clean], [ab_event_date], [ab_event_weekday], [ab_event_time], [ab_event_location], [ab_workshop_all_dates], [ab_google_calendar_link], [ab_event_participants], [ab_event_coach]</p>
                             </div>
                         </div>
 
@@ -1154,6 +1222,16 @@ Bei Fragen melde dich gerne bei uns.
 ONE for All &amp; All for ONE
 Viele Grüsse']); ?></td>
                                     </tr>
+                                    <tr>
+                                        <th scope="row">Admin-Benachrichtigung</th>
+                                        <td>
+                                            <?php $this->render_text_field([
+                                                'key' => 'admin_notification_kurs',
+                                                'placeholder' => 'admin@domain.tld'
+                                            ]); ?>
+                                            <p class="description">E-Mail-Adresse für Benachrichtigungen bei neuen Kurs-Buchungen (leer = keine Benachrichtigung).</p>
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -1207,6 +1285,64 @@ ONE for All &amp; All for ONE
 Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
+                            </div>
+                        </div>
+
+                        <?php
+                        // Kurs Coach Erinnerung
+                        $kurs_coach_key = 'kurs_coach_reminder';
+                        $kurs_coach_label = 'Kurs Coach Erinnerung';
+                        $is_active = !empty($options['send_email_' . $kurs_coach_key]);
+                        ?>
+                        <div class="email-template-accordion accordion-container">
+                          <div class="accordion-header <?php echo $is_active ? 'is-active-email' : ''; ?>">
+                            <?php echo esc_html($kurs_coach_label); ?>
+                            <?php if ($is_active): ?>
+                                <span class="status-indicator">Aktiv</span>
+                            <?php endif; ?>
+                          </div>
+                            <div class="accordion-content">
+                                <table class="form-table">
+                                    <tr>
+                                        <th scope="row">E-Mail aktivieren</th>
+                                        <td><?php $this->render_checkbox_field(['key' => 'send_email_kurs_coach_reminder']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Tage vor Kurs</th>
+                                        <td><?php $this->render_number_field(['key' => 'kurs_coach_reminder_days', 'default' => 3, 'min' => 1, 'max' => 30, 'description' => 'Wie viele Tage vor dem Kurs soll der Coach erinnert werden?']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Betreff</th>
+                                        <td><?php $this->render_text_field(['key' => 'subject_kurs_coach_reminder', 'placeholder' => 'Erinnerung: Dein Kurs steht bevor']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Überschrift</th>
+                                        <td><?php $this->render_text_field(['key' => 'header_kurs_coach_reminder', 'placeholder' => 'Kurs-Erinnerung']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">E-Mail Inhalt</th>
+                                        <td><?php $this->render_wysiwyg_field(['key' => 'content_kurs_coach_reminder', 'placeholder' => 'Lieber Coach,...', 'default' => 'Lieber Coach,
+
+dein Kurs steht bald an!
+
+<strong>Kurs:</strong> [ab_event_title_clean]
+<strong>Datum:</strong> [ab_event_weekday], [ab_event_date]
+<strong>Uhrzeit:</strong> [ab_event_time]
+<strong>Ort:</strong> [ab_event_location]
+
+<strong>Alle Termine:</strong>
+[ab_workshop_all_dates]
+
+<a href="[ab_google_calendar_link]" style="display:inline-block;background:#0066cc;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">Zum Google Kalender hinzufügen</a>
+
+<strong>Teilnehmer:</strong>
+[ab_event_participants]
+
+ONE for All &amp; All for ONE
+Viele Grüsse']); ?></td>
+                                    </tr>
+                                </table>
+                                <p class="description" style="padding: 0 12px 12px;">Verfügbare Platzhalter: [ab_event_title_clean], [ab_event_date], [ab_event_weekday], [ab_event_time], [ab_event_location], [ab_workshop_all_dates], [ab_google_calendar_link], [ab_event_participants], [ab_event_coach]</p>
                             </div>
                         </div>
 

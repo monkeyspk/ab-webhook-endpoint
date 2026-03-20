@@ -14,6 +14,8 @@ class AB_Workshop_Scheduler {
     public static function init() {
         add_action('ab_workshop_send_reminder', [__CLASS__, 'send_reminder_email']);
         add_action('ab_kurs_send_reminder', [__CLASS__, 'send_kurs_reminder_email']);
+        add_action('ab_workshop_send_coach_reminder', [__CLASS__, 'send_workshop_coach_reminder']);
+        add_action('ab_kurs_send_coach_reminder', [__CLASS__, 'send_kurs_coach_reminder']);
         add_action('ab_experience_send_welcome', [__CLASS__, 'send_experience_welcome']);
         add_action('ab_experience_send_one_month', [__CLASS__, 'send_experience_one_month']);
         add_action('ab_experience_send_two_months', [__CLASS__, 'send_experience_two_months']);
@@ -60,6 +62,29 @@ class AB_Workshop_Scheduler {
                 }
             }
         }
+
+        // Coach Reminder: X Tage vor erstem Event-Datum
+        if ($first_date_str && !empty($email_settings['send_email_workshop_coach_reminder'])) {
+            $coach_days = isset($email_settings['workshop_coach_reminder_days']) ? intval($email_settings['workshop_coach_reminder_days']) : 3;
+            if ($coach_days < 1) $coach_days = 3;
+
+            $first_date = DateTime::createFromFormat('d-m-Y', $first_date_str, $timezone);
+            if ($first_date) {
+                $first_date->setTime(10, 0, 0);
+                $coach_date = clone $first_date;
+                $coach_date->modify("-{$coach_days} days");
+
+                if ($coach_date > $now) {
+                    as_schedule_single_action(
+                        $coach_date->getTimestamp(),
+                        'ab_workshop_send_coach_reminder',
+                        array('order_id' => $order_id),
+                        'ab-workshop'
+                    );
+                    error_log("[AB Workshop] Coach-Reminder geplant für Order #{$order_id} am " . $coach_date->format('Y-m-d H:i:s'));
+                }
+            }
+        }
     }
 
     /**
@@ -103,6 +128,29 @@ class AB_Workshop_Scheduler {
                 }
             }
         }
+
+        // Coach Reminder: X Tage vor erstem Event-Datum
+        if ($first_date_str && !empty($email_settings['send_email_kurs_coach_reminder'])) {
+            $coach_days = isset($email_settings['kurs_coach_reminder_days']) ? intval($email_settings['kurs_coach_reminder_days']) : 3;
+            if ($coach_days < 1) $coach_days = 3;
+
+            $first_date = DateTime::createFromFormat('d-m-Y', $first_date_str, $timezone);
+            if ($first_date) {
+                $first_date->setTime(10, 0, 0);
+                $coach_date = clone $first_date;
+                $coach_date->modify("-{$coach_days} days");
+
+                if ($coach_date > $now) {
+                    as_schedule_single_action(
+                        $coach_date->getTimestamp(),
+                        'ab_kurs_send_coach_reminder',
+                        array('order_id' => $order_id),
+                        'ab-kurs'
+                    );
+                    error_log("[AB Kurs] Coach-Reminder geplant für Order #{$order_id} am " . $coach_date->format('Y-m-d H:i:s'));
+                }
+            }
+        }
     }
 
     /**
@@ -129,6 +177,142 @@ class AB_Workshop_Scheduler {
         }
 
         self::send_scheduled_email($order_id, 'kurs_reminder', 'Kurs Erinnerung');
+    }
+
+    /**
+     * Sendet die Workshop Coach Reminder E-Mail (Action Scheduler Callback).
+     */
+    public static function send_workshop_coach_reminder($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order || !$order->has_status('workshop')) {
+            error_log("[AB Workshop] Coach-Reminder für Order #{$order_id} übersprungen - Status ist nicht 'workshop'");
+            return;
+        }
+        self::send_coach_reminder_email($order_id, 'workshop_coach_reminder', 'Workshop Coach Erinnerung');
+    }
+
+    /**
+     * Sendet die Kurs Coach Reminder E-Mail (Action Scheduler Callback).
+     */
+    public static function send_kurs_coach_reminder($order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order || !$order->has_status('kurs')) {
+            error_log("[AB Kurs] Coach-Reminder für Order #{$order_id} übersprungen - Status ist nicht 'kurs'");
+            return;
+        }
+        self::send_coach_reminder_email($order_id, 'kurs_coach_reminder', 'Kurs Coach Erinnerung');
+    }
+
+    /**
+     * Sendet eine Coach-Reminder E-Mail.
+     * Recipient: Coach email aus Order Item Meta '_event_coach_email'.
+     */
+    private static function send_coach_reminder_email($order_id, $email_key, $status_label) {
+        $sent_marker = '_ab_email_sent_' . $email_key;
+        if (get_post_meta($order_id, $sent_marker, true) === 'yes') {
+            error_log("[AB Scheduler] Coach E-Mail '{$email_key}' bereits gesendet für Order #{$order_id}");
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) return;
+
+        // Coach-Email aus Order Item holen
+        $coach_email = '';
+        foreach ($order->get_items() as $item) {
+            $coach_email = $item->get_meta('_event_coach_email');
+            if (!empty($coach_email)) break;
+        }
+
+        // Fallback: headcoach email vom Event Post
+        if (empty($coach_email)) {
+            foreach ($order->get_items() as $item) {
+                $product_id = $item->get_meta('_event_product_id') ?: $item->get_product_id();
+                if ($product_id) {
+                    $event_id = get_post_meta($product_id, '_event_id', true);
+                    if ($event_id) {
+                        $coach_email = get_post_meta($event_id, '_event_headcoach_email', true);
+                        if (!empty($coach_email)) break;
+                    }
+                }
+            }
+        }
+
+        if (empty($coach_email)) {
+            error_log("[AB Scheduler] Keine Coach-Email gefunden für Order #{$order_id}");
+            return;
+        }
+
+        $email_settings = get_option('ab_email_settings', []);
+
+        if (empty($email_settings['send_email_' . $email_key])) {
+            error_log("[AB Scheduler] Coach E-Mail '{$email_key}' ist deaktiviert");
+            return;
+        }
+
+        $subject = !empty($email_settings['subject_' . $email_key])
+            ? $email_settings['subject_' . $email_key]
+            : 'Erinnerung: Bevorstehender ' . (strpos($email_key, 'workshop') !== false ? 'Workshop' : 'Kurs');
+
+        $header_text = !empty($email_settings['header_' . $email_key])
+            ? $email_settings['header_' . $email_key]
+            : $status_label;
+
+        $email_body = !empty($email_settings['content_' . $email_key])
+            ? $email_settings['content_' . $email_key]
+            : '';
+
+        if (empty($email_body)) {
+            error_log("[AB Scheduler] Kein E-Mail-Inhalt für Coach '{$email_key}' konfiguriert");
+            return;
+        }
+
+        // Platzhalter ersetzen
+        $subject = AB_Email_Customizer::replace_variables($subject, $order, $status_label);
+        $header_text = AB_Email_Customizer::replace_variables($header_text, $order, $status_label);
+        $email_body = AB_Email_Customizer::replace_variables($email_body, $order, $status_label);
+
+        // Shortcodes auflösen
+        global $ab_current_order;
+        $ab_current_order = $order;
+
+        $subject = do_shortcode($subject);
+        $header_text = do_shortcode($header_text);
+        $email_body = do_shortcode($email_body);
+        $email_body = apply_filters('ab_process_email_content', $email_body, $order);
+
+        $ab_current_order = null;
+
+        // HTML-Template
+        ob_start();
+        $template_path = plugin_dir_path(__FILE__) . '../templates/emails/custom-status-email.php';
+        if (!file_exists($template_path)) {
+            error_log("[AB Scheduler] E-Mail-Template nicht gefunden: " . $template_path);
+            return;
+        }
+        include $template_path;
+        $message = ob_get_clean();
+        if (empty($message)) return;
+
+        // Header
+        $sender_email = !empty($email_settings['sender_email']) ? $email_settings['sender_email'] : get_option('admin_email');
+        $sender_name = !empty($email_settings['sender_name']) ? $email_settings['sender_name'] : get_bloginfo('name');
+
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $sender_name . ' <' . $sender_email . '>',
+            'Reply-To: ' . $sender_name . ' <' . $sender_email . '>',
+        ];
+
+        $sent = wp_mail($coach_email, $subject, $message, $headers);
+
+        if ($sent) {
+            update_post_meta($order_id, $sent_marker, 'yes');
+            $order->add_order_note('Coach-Erinnerung gesendet an ' . $coach_email);
+            error_log("[AB Scheduler] Coach E-Mail '{$email_key}' gesendet an {$coach_email} für Order #{$order_id}");
+        } else {
+            error_log("[AB Scheduler] Coach E-Mail '{$email_key}' Versand fehlgeschlagen für Order #{$order_id}");
+        }
     }
 
     /**
@@ -253,6 +437,7 @@ class AB_Workshop_Scheduler {
         }
 
         as_unschedule_all_actions('ab_workshop_send_reminder', array('order_id' => $order_id), 'ab-workshop');
+        as_unschedule_all_actions('ab_workshop_send_coach_reminder', array('order_id' => $order_id), 'ab-workshop');
 
         error_log("[AB Workshop] Alle geplanten E-Mails gecancelt für Order #{$order_id}");
     }
@@ -266,6 +451,7 @@ class AB_Workshop_Scheduler {
         }
 
         as_unschedule_all_actions('ab_kurs_send_reminder', array('order_id' => $order_id), 'ab-kurs');
+        as_unschedule_all_actions('ab_kurs_send_coach_reminder', array('order_id' => $order_id), 'ab-kurs');
 
         error_log("[AB Kurs] Alle geplanten E-Mails gecancelt für Order #{$order_id}");
     }

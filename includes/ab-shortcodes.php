@@ -686,6 +686,69 @@ add_shortcode('ab_workshop_all_dates', 'ab_sc_workshop_all_dates');
 
 
 /**
+ * Shortcode: [ab_google_calendar_link]
+ * Generiert einen Google Calendar "Add Event" Link aus den Event-Daten der Bestellung.
+ */
+function ab_sc_google_calendar_link() {
+    global $ab_current_order;
+    if (!$ab_current_order) return '';
+
+    $item = ab_we_get_first_event_item($ab_current_order);
+    if (!$item) return '';
+
+    $title = $item->get_meta('_event_title_clean') ?: $item->get_meta('_event_title');
+    $venue = $item->get_meta('_event_venue');
+    $date_str = $item->get_meta('_event_date');
+    $time_str = $item->get_meta('_event_time');
+
+    if (empty($title) || empty($date_str)) return '';
+
+    $date_obj = DateTime::createFromFormat('d-m-Y', trim($date_str));
+    if (!$date_obj) {
+        $date_obj = DateTime::createFromFormat('d.m.Y', trim($date_str));
+    }
+    if (!$date_obj) return '';
+
+    $start_time = '09:00';
+    $end_time = '10:00';
+    if (!empty($time_str)) {
+        $parts = preg_split('/\s*[-–]\s*/', $time_str);
+        if (count($parts) >= 2) {
+            $start_time = trim($parts[0]);
+            $end_time = trim($parts[1]);
+        } elseif (count($parts) === 1) {
+            $start_time = trim($parts[0]);
+            $end_dt = DateTime::createFromFormat('H:i', $start_time);
+            if ($end_dt) {
+                $end_dt->modify('+1 hour');
+                $end_time = $end_dt->format('H:i');
+            }
+        }
+    }
+
+    $start_dt = clone $date_obj;
+    $start_parts = explode(':', $start_time);
+    $start_dt->setTime((int)($start_parts[0] ?? 9), (int)($start_parts[1] ?? 0));
+
+    $end_dt = clone $date_obj;
+    $end_parts = explode(':', $end_time);
+    $end_dt->setTime((int)($end_parts[0] ?? 10), (int)($end_parts[1] ?? 0));
+
+    $params = [
+        'action'   => 'TEMPLATE',
+        'text'     => $title,
+        'dates'    => $start_dt->format('Ymd\THis') . '/' . $end_dt->format('Ymd\THis'),
+        'ctz'      => 'Europe/Zurich',
+    ];
+    if (!empty($venue)) {
+        $params['location'] = $venue;
+    }
+
+    return 'https://calendar.google.com/calendar/render?' . http_build_query($params);
+}
+add_shortcode('ab_google_calendar_link', 'ab_sc_google_calendar_link');
+
+/**
  * Shortcode-Beschreibungen
  */
 function ab_get_shortcode_descriptions() {
@@ -724,6 +787,7 @@ function ab_get_shortcode_descriptions() {
         'ab_gutschein_nachricht'  => 'Gibt die persönliche Nachricht des Gutscheins zurück.',
         'ab_gutschein_empfaenger' => 'Gibt die E-Mail des Gutschein-Empfängers zurück.',
         'ab_workshop_all_dates'   => 'Zeigt alle Workshop-Termine formatiert als Liste an (Wochentag, Datum, Uhrzeit).',
+        'ab_google_calendar_link' => 'Generiert einen Google Calendar Link zum Hinzufügen des Events.',
 
     );
 }
