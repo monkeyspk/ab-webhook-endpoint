@@ -313,3 +313,56 @@ function ab_get_workshop_last_date($order) {
 
     return false;
 }
+
+/**
+ * Ermittelt die Event-ID aus einer Bestellung (erstes Event-Item).
+ */
+function ab_get_event_id_from_order($order) {
+    if (is_numeric($order)) {
+        $order = wc_get_order($order);
+    }
+    if (!$order instanceof WC_Order) {
+        return false;
+    }
+    foreach ($order->get_items() as $item) {
+        $product_id = $item->get_meta('_event_product_id') ?: $item->get_product_id();
+        if (!$product_id) continue;
+        $event_id = get_post_meta($product_id, '_event_id', true);
+        if ($event_id) return $event_id;
+    }
+    return false;
+}
+
+/**
+ * Holt alle Bestellungen für ein bestimmtes Event im angegebenen Status.
+ */
+function ab_get_all_orders_for_event($event_id, $status) {
+    $product_ids = get_posts([
+        'post_type'   => 'product',
+        'meta_key'    => '_event_id',
+        'meta_value'  => $event_id,
+        'fields'      => 'ids',
+        'numberposts' => -1,
+    ]);
+    if (empty($product_ids)) return [];
+
+    $orders = wc_get_orders([
+        'status' => 'wc-' . $status,
+        'limit'  => -1,
+        'return' => 'ids',
+    ]);
+
+    $matching_orders = [];
+    foreach ($orders as $order_id) {
+        $order = wc_get_order($order_id);
+        if (!$order) continue;
+        foreach ($order->get_items() as $item) {
+            $pid = $item->get_meta('_event_product_id') ?: $item->get_product_id();
+            if (in_array($pid, $product_ids)) {
+                $matching_orders[] = $order;
+                break;
+            }
+        }
+    }
+    return $matching_orders;
+}

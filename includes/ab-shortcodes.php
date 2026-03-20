@@ -229,7 +229,40 @@ add_shortcode('ab_event_availability', 'ab_sc_event_availability');
  * 14) Shortcode: [ab_event_participants]
  */
 function ab_sc_event_participants() {
-    global $ab_current_order;
+    global $ab_current_order, $ab_coach_email_all_orders;
+
+    // Coach-Email Kontext: Teilnehmer aus ALLEN Bestellungen aggregieren
+    if (!empty($ab_coach_email_all_orders) && is_array($ab_coach_email_all_orders)) {
+        $all_participants = [];
+        foreach ($ab_coach_email_all_orders as $order) {
+            foreach ($order->get_items() as $item) {
+                $participants = $item->get_meta('_event_participant_data');
+                if (!empty($participants) && is_array($participants)) {
+                    foreach ($participants as $p) {
+                        $all_participants[] = $p;
+                    }
+                }
+            }
+        }
+
+        if (empty($all_participants)) {
+            return 'Keine Teilnehmerdaten vorhanden.';
+        }
+
+        $output = "";
+        foreach ($all_participants as $index => $p) {
+            $output .= sprintf(
+                "%d) %s %s (%s)\n",
+                $index + 1,
+                $p['vorname'] ?? '',
+                $p['name'] ?? '',
+                $p['geburtsdatum'] ?? ''
+            );
+        }
+        return '<pre>' . esc_html($output) . '</pre>';
+    }
+
+    // Standard: Teilnehmer aus einzelner Bestellung
     if (!$ab_current_order) return '';
 
     $item = ab_we_get_first_event_item($ab_current_order);
