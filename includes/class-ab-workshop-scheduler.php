@@ -19,6 +19,10 @@ class AB_Workshop_Scheduler {
         add_action('ab_experience_send_welcome', [__CLASS__, 'send_experience_welcome']);
         add_action('ab_experience_send_one_month', [__CLASS__, 'send_experience_one_month']);
         add_action('ab_experience_send_two_months', [__CLASS__, 'send_experience_two_months']);
+
+        // Admin: Manueller Coach-Reminder Button in Bestellungen
+        add_action('add_meta_boxes', [__CLASS__, 'add_coach_reminder_meta_box']);
+        add_action('admin_init', [__CLASS__, 'handle_manual_coach_reminder']);
     }
 
     /**
@@ -313,6 +317,118 @@ class AB_Workshop_Scheduler {
         } else {
             error_log("[AB Scheduler] Coach E-Mail '{$email_key}' Versand fehlgeschlagen für Order #{$order_id}");
         }
+    }
+
+    // =============================================
+    // Manueller Coach-Reminder aus der Bestellung
+    // =============================================
+
+    /**
+     * Meta-Box für manuellen Coach-Reminder in Workshop/Kurs-Bestellungen.
+     */
+    public static function add_coach_reminder_meta_box() {
+        add_meta_box(
+            'ab_coach_reminder',
+            'Coach-Erinnerung',
+            [__CLASS__, 'render_coach_reminder_meta_box'],
+            'shop_order',
+            'side',
+            'default'
+        );
+    }
+
+    public static function render_coach_reminder_meta_box($post) {
+        $order = wc_get_order($post->ID);
+        if (!$order) return;
+
+        $status = $order->get_status();
+        if (!in_array($status, ['workshop', 'kurs'])) {
+            echo '<p style="color:#999;">Nur für Workshop/Kurs-Bestellungen verfügbar.</p>';
+            return;
+        }
+
+        // Coach-Email ermitteln
+        $coach_email = '';
+        $coach_name = '';
+        foreach ($order->get_items() as $item) {
+            $coach_email = $item->get_meta('_event_coach_email');
+            $coach_name = $item->get_meta('_event_coach');
+            if (!empty($coach_email)) break;
+        }
+
+        if (empty($coach_email)) {
+            echo '<p style="color:#cc0000;">Keine Coach-Email in dieser Bestellung hinterlegt.</p>';
+            return;
+        }
+
+        // Status prüfen
+        $email_key = ($status === 'workshop') ? 'workshop_coach_reminder' : 'kurs_coach_reminder';
+        $was_sent = get_post_meta($order->get_id(), '_ab_email_sent_' . $email_key, true) === 'yes';
+        $sent_date = '';
+        if ($was_sent) {
+            // Aus Order Notes das Datum holen
+            $notes = wc_get_order_notes(['order_id' => $order->get_id(), 'type' => 'internal']);
+            foreach ($notes as $note) {
+                if (strpos($note->content, 'Coach-Erinnerung gesendet') !== false) {
+                    $sent_date = $note->date_created->date('d.m.Y H:i');
+                    break;
+                }
+            }
+        }
+
+        echo '<p><strong>Coach:</strong> ' . esc_html($coach_name) . '</p>';
+        echo '<p><strong>E-Mail:</strong> ' . esc_html($coach_email) . '</p>';
+
+        if ($was_sent && $sent_date) {
+            echo '<p style="color:#46b450;">&#10003; Gesendet am ' . esc_html($sent_date) . '</p>';
+        } elseif ($was_sent) {
+            echo '<p style="color:#46b450;">&#10003; Bereits gesendet</p>';
+        }
+
+        $send_url = wp_nonce_url(
+            add_query_arg([
+                'ab_send_coach_reminder' => $order->get_id(),
+            ]),
+            'ab_coach_reminder_' . $order->get_id()
+        );
+
+        $btn_label = $was_sent ? 'Erneut senden' : 'Coach-Erinnerung jetzt senden';
+        $btn_style = $was_sent ? 'button' : 'button button-primary';
+        echo '<a href="' . esc_url($send_url) . '" class="' . $btn_style . '" style="width:100%;text-align:center;">' . $btn_label . '</a>';
+    }
+
+    /**
+     * Verarbeitet den manuellen Coach-Reminder-Versand.
+     */
+    public static function handle_manual_coach_reminder() {
+        if (!isset($_GET['ab_send_coach_reminder'])) {
+            return;
+        }
+
+        $order_id = absint($_GET['ab_send_coach_reminder']);
+        if (!wp_verify_nonce($_GET['_wpnonce'] ?? '', 'ab_coach_reminder_' . $order_id)) {
+            return;
+        }
+
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) return;
+
+        $status = $order->get_status();
+        $email_key = ($status === 'workshop') ? 'workshop_coach_reminder' : 'kurs_coach_reminder';
+
+        // Marker zurücksetzen damit erneuter Versand möglich ist
+        delete_post_meta($order_id, '_ab_email_sent_' . $email_key);
+
+        // Coach-Reminder senden
+        self::send_coach_reminder_email($order_id, $email_key, ($status === 'workshop') ? 'Workshop Coach Erinnerung' : 'Kurs Coach Erinnerung');
+
+        // Zurück zur Bestellung
+        wp_redirect(admin_url('post.php?post=' . $order_id . '&action=edit&ab_coach_sent=1'));
+        exit;
     }
 
     /**
