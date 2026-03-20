@@ -1034,8 +1034,7 @@ ONE for All &amp; All for ONE
 Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
-                                <?php $this->render_scheduler_status('ab_workshop_send_reminder', 'ab-workshop', 'workshop_reminder'); ?>
-                            </div>
+                                                            </div>
                         </div>
 
                         <?php
@@ -1093,8 +1092,7 @@ Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
                                 <p class="description" style="padding: 0 12px 12px;">Verfügbare Platzhalter: [ab_event_title_clean], [ab_event_date], [ab_event_weekday], [ab_event_time], [ab_event_location], [ab_workshop_all_dates], [ab_google_calendar_link], [ab_event_participants], [ab_event_coach]</p>
-                                <?php $this->render_scheduler_status('ab_workshop_send_coach_reminder', 'ab-workshop', 'workshop_coach_reminder'); ?>
-                            </div>
+                                                            </div>
                         </div>
 
                         <?php
@@ -1287,8 +1285,7 @@ ONE for All &amp; All for ONE
 Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
-                                <?php $this->render_scheduler_status('ab_kurs_send_reminder', 'ab-kurs', 'kurs_reminder'); ?>
-                            </div>
+                                                            </div>
                         </div>
 
                         <?php
@@ -1346,8 +1343,7 @@ Viele Grüsse']); ?></td>
                                     </tr>
                                 </table>
                                 <p class="description" style="padding: 0 12px 12px;">Verfügbare Platzhalter: [ab_event_title_clean], [ab_event_date], [ab_event_weekday], [ab_event_time], [ab_event_location], [ab_workshop_all_dates], [ab_google_calendar_link], [ab_event_participants], [ab_event_coach]</p>
-                                <?php $this->render_scheduler_status('ab_kurs_send_coach_reminder', 'ab-kurs', 'kurs_coach_reminder'); ?>
-                            </div>
+                                                            </div>
                         </div>
 
                         <?php
