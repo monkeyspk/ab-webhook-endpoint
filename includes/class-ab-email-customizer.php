@@ -1543,6 +1543,29 @@ Viele Grüsse']); ?></td>
                                 </div>
                             </div>
                         <?php endforeach; ?>
+
+                        <?php
+                        // Gutschein Admin-Benachrichtigung
+                        ?>
+                        <div class="email-template-accordion accordion-container">
+                          <div class="accordion-header">
+                            Gutschein Admin-Benachrichtigung
+                          </div>
+                            <div class="accordion-content">
+                                <table class="form-table">
+                                    <tr>
+                                        <th scope="row">Admin-Benachrichtigung</th>
+                                        <td>
+                                            <?php $this->render_text_field([
+                                                'key' => 'admin_notification_gutschein',
+                                                'placeholder' => 'admin@domain.tld'
+                                            ]); ?>
+                                            <p class="description">E-Mail-Adresse für Benachrichtigungen bei neuen Gutschein-Bestellungen (leer = keine Benachrichtigung). Enthält: Betrag, Code, Käufer, Empfänger.</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     </div>
 

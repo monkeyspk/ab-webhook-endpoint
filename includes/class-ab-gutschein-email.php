@@ -160,6 +160,11 @@ class AB_Gutschein_Email {
             self::send_buyer_confirmation($order, $coupon_code, $amount, $expiry_date, $recipient_email, $headers);
         }
 
+        // Admin-Benachrichtigung senden
+        if ($sent) {
+            self::send_admin_notification($order, $coupon_code, $amount, $expiry_date, $recipient_email, $sender_name);
+        }
+
         // Marker setzen
         if ($sent) {
             $order->update_meta_data('_ab_gutschein_email_sent', 'yes');
@@ -167,6 +172,62 @@ class AB_Gutschein_Email {
         }
 
         return $sent;
+    }
+
+    /**
+     * Sendet eine Admin-Benachrichtigung bei neuer Gutschein-Buchung.
+     */
+    private static function send_admin_notification($order, $coupon_code, $amount, $expiry_date, $recipient_email, $sender_name) {
+        $email_settings = get_option('ab_email_settings', []);
+        $notification_email = isset($email_settings['admin_notification_gutschein']) ? $email_settings['admin_notification_gutschein'] : '';
+
+        if (empty($notification_email)) {
+            return;
+        }
+
+        $sender_email_addr = !empty($email_settings['sender_email']) ? $email_settings['sender_email'] : get_option('admin_email');
+        $sender_name_from = !empty($email_settings['sender_name']) ? $email_settings['sender_name'] : get_bloginfo('name');
+
+        $order_id = $order->get_id();
+        $buyer_name = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
+        $buyer_email = $order->get_billing_email();
+        $formatted_amount = number_format(floatval($amount), 2, ',', '.') . ' EUR';
+
+        $admin_subject = 'Neuer Gutschein — Bestellung #' . $order->get_order_number() . ' (' . $formatted_amount . ')';
+
+        $admin_message = '<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;">'
+            . '<h2 style="color:#1e3d59;margin-bottom:5px;">Neuer Gutschein bestellt</h2>'
+            . '<p style="color:#666;margin-top:0;">Bestellung #' . $order->get_order_number() . '</p>'
+            . '<table style="width:100%;border-collapse:collapse;margin:15px 0;">'
+            . '<tr><td colspan="2" style="padding:8px;background:#1e3d59;color:#fff;font-weight:bold;">Gutschein-Details</td></tr>'
+            . '<tr><td style="padding:4px 8px;color:#666;">Betrag:</td><td style="padding:4px 8px;font-weight:bold;">' . esc_html($formatted_amount) . '</td></tr>'
+            . '<tr><td style="padding:4px 8px;color:#666;">Code:</td><td style="padding:4px 8px;font-family:Courier New,monospace;">' . esc_html($coupon_code) . '</td></tr>'
+            . '<tr><td style="padding:4px 8px;color:#666;">Gültig bis:</td><td style="padding:4px 8px;">' . esc_html($expiry_date) . '</td></tr>'
+            . '</table>'
+            . '<table style="width:100%;border-collapse:collapse;margin:15px 0;">'
+            . '<tr><td colspan="2" style="padding:8px;background:#1e3d59;color:#fff;font-weight:bold;">Käufer</td></tr>'
+            . '<tr><td style="padding:4px 8px;color:#666;">Name:</td><td style="padding:4px 8px;">' . esc_html($buyer_name) . '</td></tr>'
+            . '<tr><td style="padding:4px 8px;color:#666;">E-Mail:</td><td style="padding:4px 8px;">' . esc_html($buyer_email) . '</td></tr>';
+
+        if (!empty($recipient_email) && $recipient_email !== $buyer_email) {
+            $admin_message .= '<tr><td style="padding:4px 8px;color:#666;">Empfänger:</td><td style="padding:4px 8px;">' . esc_html($recipient_email) . '</td></tr>';
+        }
+        if (!empty($sender_name)) {
+            $admin_message .= '<tr><td style="padding:4px 8px;color:#666;">Absender-Name:</td><td style="padding:4px 8px;">' . esc_html($sender_name) . '</td></tr>';
+        }
+
+        $admin_message .= '</table>'
+            . '<p style="margin-top:15px;"><a href="' . admin_url('post.php?post=' . $order_id . '&action=edit') . '" style="display:inline-block;background:#0066cc;color:#fff;padding:8px 16px;text-decoration:none;border-radius:4px;">Bestellung ansehen</a></p>'
+            . '</div>';
+
+        $admin_headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $sender_name_from . ' <' . $sender_email_addr . '>',
+            'Reply-To: ' . $sender_name_from . ' <' . $sender_email_addr . '>',
+        ];
+
+        wp_mail($notification_email, $admin_subject, $admin_message, $admin_headers);
+        error_log('[AB Gutschein] Admin-Benachrichtigung gesendet an ' . $notification_email . ' für Order #' . $order_id);
     }
 
     /**
