@@ -478,16 +478,32 @@ add_shortcode('ab_event_venue_lng', 'ab_sc_event_venue_lng');
 /**
  * Shortcode: [contract_link]
  */
-function ab_sc_contract_link() {
+function ab_sc_contract_link($atts = []) {
     global $ab_current_order;
-    if (!$ab_current_order) return '';
 
+    $atts = shortcode_atts(['order_id' => ''], $atts);
+
+    // Order bestimmen: entweder aus Attribut oder aus globaler Variable
+    if (!empty($atts['order_id'])) {
+        $order = wc_get_order(intval($atts['order_id']));
+    } else {
+        $order = $ab_current_order;
+    }
+
+    if (!$order) return '';
+
+    $order_id = $order->get_id();
     $wizard_page_url = home_url('/vertrag/');
-    $token = wp_generate_password(32, false);
-    update_post_meta($ab_current_order->get_id(), '_ab_contract_token', $token);
+
+    // Bestehenden Token wiederverwenden — nur generieren wenn keiner existiert
+    $token = get_post_meta($order_id, '_ab_contract_token', true);
+    if (empty($token)) {
+        $token = wp_generate_password(32, false);
+        update_post_meta($order_id, '_ab_contract_token', $token);
+    }
 
     return add_query_arg([
-        'order_id' => $ab_current_order->get_id(),
+        'order_id' => $order_id,
         'step'     => 1,
         'token'    => $token
     ], $wizard_page_url);

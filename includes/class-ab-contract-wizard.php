@@ -39,34 +39,12 @@ class AB_Contract_Wizard {
 
         if (!current_user_can('edit_shop_orders') &&
         !in_array($order->get_status(), ['vertragverschickt', 'schuelerin', 'bkdvertrag', 'bestandkundeakz'])) {
-            // Die E-Mail-Adresse aus den Einstellungen holen
-            $email_setting = get_option('ab_footer_row1_col3', 'M berlin@parkourone.com');
-
-            // Den eigentlichen E-Mail-Teil extrahieren
-            // Prüfen, ob im Format "M email@domain.com" oder ähnlich
-            if (preg_match('/^M\s+(.+@.+\..+)$/', $email_setting, $matches)) {
-                // E-Mail aus den Übereinstimmungen extrahieren
-                $school_email = $matches[1];
-            }
-            // Falls es nur "muenster@parkourone.com" ohne Präfix ist
-            elseif (filter_var($email_setting, FILTER_VALIDATE_EMAIL)) {
-                $school_email = $email_setting;
-            }
-            // Fallback für andere Formate
-            else {
-                // Versuche, irgendeine E-Mail-Adresse im Text zu finden
-                preg_match('/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/', $email_setting, $matches);
-                $school_email = !empty($matches[1]) ? $matches[1] : 'info@parkourone.com';
-            }
-
-            // Nachricht mit der E-Mail-Adresse erstellen
-            return '<p>Der Vertragslink ist nicht mehr gültig. Melde dich bitte bei <a href="mailto:' .
-                   esc_attr($school_email) . '">' . esc_html($school_email) . '</a> wenn du weiterhin einsteigen möchtest.</p>';
+            return self::render_resend_link_form();
         }
 
 
         if (!self::user_can_view_order($order)) {
-            return '<p>Sie haben keine Berechtigung, diese Bestellung einzusehen.</p>';
+            return self::render_resend_link_form();
         }
 
         $contract_id = self::determine_contract_type($order);
@@ -208,6 +186,166 @@ class AB_Contract_Wizard {
         return false;
     }
 
+
+    /**
+     * Self-Service: Code per E-Mail anfordern → Code eingeben → Weiterleitung zum Vertrag
+     */
+    private static function render_resend_link_form() {
+        $nonce = wp_create_nonce('ab_contract_code_nonce');
+        $ajax_url = esc_url(admin_url('admin-ajax.php'));
+        ob_start();
+        ?>
+        <div class="ab-code-container" style="max-width:460px; margin:40px auto; font-family:Arial,sans-serif;">
+            <div style="background:#fff; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); padding:30px;">
+
+                <!-- Step 1: E-Mail eingeben -->
+                <div id="ab-code-step1">
+                    <h2 style="margin-top:0; color:#1e3d59;">Vertrag öffnen</h2>
+                    <p style="color:#555; line-height:1.6;">Dein Vertragslink ist nicht mehr gültig. Kein Problem — gib deine E-Mail-Adresse ein und wir senden dir einen Zugangscode.</p>
+
+                    <div style="margin-bottom:15px;">
+                        <label for="ab-code-email" style="display:block; margin-bottom:5px; font-weight:bold; color:#333;">E-Mail-Adresse</label>
+                        <input type="email" id="ab-code-email" placeholder="deine@email.ch"
+                               style="width:100%; padding:10px 12px; border:1px solid #ccc; border-radius:5px; font-size:15px; box-sizing:border-box;" />
+                    </div>
+                    <button id="ab-code-send" type="button"
+                            style="width:100%; padding:12px; background-color:#0066cc; color:#fff; border:none; border-radius:5px; font-size:16px; cursor:pointer;">
+                        Code anfordern
+                    </button>
+                </div>
+
+                <!-- Step 2: Code eingeben -->
+                <div id="ab-code-step2" style="display:none;">
+                    <h2 style="margin-top:0; color:#1e3d59;">Code eingeben</h2>
+                    <p style="color:#555; line-height:1.6;">Wir haben dir einen 6-stelligen Code per E-Mail gesendet. Gib ihn hier ein:</p>
+
+                    <div style="margin-bottom:15px; text-align:center;">
+                        <input type="text" id="ab-code-input" maxlength="6" placeholder="000000" autocomplete="one-time-code" inputmode="numeric"
+                               style="width:200px; padding:12px; border:2px solid #c8d7e1; border-radius:8px; font-size:24px; font-weight:bold; letter-spacing:6px; text-align:center;" />
+                    </div>
+                    <button id="ab-code-verify" type="button"
+                            style="width:100%; padding:12px; background-color:#0066cc; color:#fff; border:none; border-radius:5px; font-size:16px; cursor:pointer;">
+                        Vertrag öffnen
+                    </button>
+                    <p style="margin-top:12px; text-align:center;">
+                        <a href="#" id="ab-code-resend" style="color:#0066cc; font-size:13px; text-decoration:none;">Code nochmals senden</a>
+                    </p>
+                </div>
+
+                <div id="ab-code-message" style="display:none; margin-top:15px; padding:12px; border-radius:5px;"></div>
+
+                <p style="margin-top:20px; font-size:13px; color:#888;">
+                    Verwende die E-Mail-Adresse, mit der du angemeldet wurdest. Der Code ist 15 Minuten gültig.
+                </p>
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            var ajaxUrl = '<?php echo $ajax_url; ?>';
+            var nonce = '<?php echo $nonce; ?>';
+            var step1 = document.getElementById('ab-code-step1');
+            var step2 = document.getElementById('ab-code-step2');
+            var emailInput = document.getElementById('ab-code-email');
+            var codeInput = document.getElementById('ab-code-input');
+            var sendBtn = document.getElementById('ab-code-send');
+            var verifyBtn = document.getElementById('ab-code-verify');
+            var resendLink = document.getElementById('ab-code-resend');
+            var msg = document.getElementById('ab-code-message');
+            var storedEmail = '';
+
+            function showMsg(text, type) {
+                msg.style.display = 'block';
+                msg.textContent = text;
+                if (type === 'success') { msg.style.background = '#d4edda'; msg.style.color = '#155724'; }
+                else if (type === 'error') { msg.style.background = '#f8d7da'; msg.style.color = '#721c24'; }
+                else { msg.style.background = '#fff3cd'; msg.style.color = '#856404'; }
+            }
+
+            function hideMsg() { msg.style.display = 'none'; }
+
+            function setLoading(btn, loading, originalText) {
+                btn.disabled = loading;
+                btn.textContent = loading ? 'Bitte warten...' : originalText;
+                btn.style.opacity = loading ? '0.7' : '1';
+            }
+
+            function ajax(action, data, callback) {
+                var params = 'action=' + action + '&nonce=' + nonce;
+                for (var k in data) { params += '&' + k + '=' + encodeURIComponent(data[k]); }
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', ajaxUrl);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.onload = function() {
+                    try { callback(JSON.parse(xhr.responseText)); } catch(e) { callback(null); }
+                };
+                xhr.onerror = function() { callback(null); };
+                xhr.send(params);
+            }
+
+            function sendCode() {
+                var email = emailInput.value.trim();
+                if (!email || email.indexOf('@') === -1) { showMsg('Bitte gib eine gültige E-Mail-Adresse ein.', 'warn'); return; }
+                hideMsg();
+                storedEmail = email;
+                setLoading(sendBtn, true, 'Code anfordern');
+
+                ajax('ab_send_contract_code', { email: email }, function(resp) {
+                    setLoading(sendBtn, false, 'Code anfordern');
+                    if (!resp) { showMsg('Verbindungsfehler. Bitte versuche es erneut.', 'error'); return; }
+                    if (resp.success) {
+                        step1.style.display = 'none';
+                        step2.style.display = 'block';
+                        showMsg(resp.data.message, 'success');
+                        setTimeout(function() { codeInput.focus(); }, 100);
+                    } else {
+                        showMsg(resp.data.message, 'error');
+                    }
+                });
+            }
+
+            function verifyCode() {
+                var code = codeInput.value.trim().replace(/\s/g, '');
+                if (code.length !== 6) { showMsg('Bitte gib den vollständigen 6-stelligen Code ein.', 'warn'); return; }
+                hideMsg();
+                setLoading(verifyBtn, true, 'Vertrag öffnen');
+
+                ajax('ab_verify_contract_code', { email: storedEmail, code: code }, function(resp) {
+                    setLoading(verifyBtn, false, 'Vertrag öffnen');
+                    if (!resp) { showMsg('Verbindungsfehler. Bitte versuche es erneut.', 'error'); return; }
+                    if (resp.success && resp.data.redirect) {
+                        showMsg('Code korrekt — du wirst weitergeleitet...', 'success');
+                        setTimeout(function() { window.location.href = resp.data.redirect; }, 500);
+                    } else {
+                        showMsg(resp.data.message, 'error');
+                        codeInput.value = '';
+                        codeInput.focus();
+                    }
+                });
+            }
+
+            sendBtn.addEventListener('click', sendCode);
+            emailInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendCode(); });
+            verifyBtn.addEventListener('click', verifyCode);
+            codeInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') verifyCode(); });
+            codeInput.addEventListener('input', function() { this.value = this.value.replace(/[^0-9]/g, ''); });
+            resendLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                codeInput.value = '';
+                hideMsg();
+                setLoading(sendBtn, true, 'Code anfordern');
+                ajax('ab_send_contract_code', { email: storedEmail }, function(resp) {
+                    setLoading(sendBtn, false, 'Code anfordern');
+                    if (resp && resp.success) { showMsg('Neuer Code wurde gesendet. Prüfe dein Postfach.', 'success'); }
+                    else if (resp) { showMsg(resp.data.message, 'error'); }
+                    else { showMsg('Verbindungsfehler.', 'error'); }
+                });
+            });
+        })();
+        </script>
+        <?php
+        return ob_get_clean();
+    }
 
     public static function determine_contract_type($order) {
         // Manueller Override: Bestandskunden haben _ab_contract_type_id statt _event_course_id
