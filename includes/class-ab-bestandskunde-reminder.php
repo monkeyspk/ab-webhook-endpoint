@@ -15,12 +15,33 @@ class AB_Bestandskunde_Reminder {
     const CRON_HOOK = 'ab_bestandskunde_reminder_check';
 
     public static function init() {
-        // Cron-Hook registrieren
+        // Action Hook registrieren (wird von WP-Cron ODER Action Scheduler aufgerufen)
         add_action(self::CRON_HOOK, [__CLASS__, 'check_and_send_reminders']);
 
-        // Täglichen Cron einplanen falls noch nicht vorhanden
-        if (!wp_next_scheduled(self::CRON_HOOK)) {
-            wp_schedule_event(time(), 'daily', self::CRON_HOOK);
+        // Action Scheduler nutzen falls verfügbar (zuverlässiger als WP-Cron)
+        if (function_exists('as_next_scheduled_action')) {
+            // Alten WP-Cron entfernen falls noch vorhanden
+            $wp_cron_ts = wp_next_scheduled(self::CRON_HOOK);
+            if ($wp_cron_ts) {
+                wp_unschedule_event($wp_cron_ts, self::CRON_HOOK);
+            }
+            // Action Scheduler: täglich um 08:00 Uhr
+            if (as_next_scheduled_action(self::CRON_HOOK) === false) {
+                $timezone = new DateTimeZone(wp_timezone_string());
+                $tomorrow_8am = new DateTime('tomorrow 08:00', $timezone);
+                as_schedule_recurring_action(
+                    $tomorrow_8am->getTimestamp(),
+                    DAY_IN_SECONDS,
+                    self::CRON_HOOK,
+                    [],
+                    'ab-bestandskunde-reminder'
+                );
+            }
+        } else {
+            // Fallback: WP-Cron
+            if (!wp_next_scheduled(self::CRON_HOOK)) {
+                wp_schedule_event(time(), 'daily', self::CRON_HOOK);
+            }
         }
     }
 
@@ -152,7 +173,8 @@ class AB_Bestandskunde_Reminder {
             $content = $options['content_bestandskunde_reminder'] ?? '';
         }
 
-        if (empty($content)) {
+        // Fallback-Template nur für 1. Erinnerung — 2. Erinnerung MUSS konfiguriert sein
+        if (empty($content) && $reminder_number === 1) {
             $content = '<!-- Logo -->
 <div style="font-family: Arial, sans-serif; color: #333;">
 <div style="text-align: center; margin-bottom: 20px;">
@@ -173,6 +195,12 @@ class AB_Bestandskunde_Reminder {
 </div>
 <div style="border-top: 1px solid #ddd; margin: 20px 0;"></div>
 </div>';
+        } elseif (empty($content) && $reminder_number === 2) {
+            // 2. Erinnerung ohne konfigurierten Inhalt → NICHT senden, Admin benachrichtigen
+            error_log('[AB Reminder] FEHLER: 2. Erinnerung für Order #' . $order->get_id() . ' hat keinen E-Mail-Inhalt! Bitte unter Einstellungen > E-Mails den Inhalt der 2. Erinnerung konfigurieren.');
+            $order->add_order_note('⚠️ 2. Erinnerungsmail konnte NICHT gesendet werden — E-Mail-Inhalt ist nicht konfiguriert. Bitte unter Einstellungen > E-Mails den Text für die 2. Bestandskunde-Erinnerung eintragen.');
+            self::notify_admin_missing_template($order);
+            return false;
         }
 
         // Platzhalter ersetzen
@@ -251,12 +279,34 @@ class AB_Bestandskunde_Reminder {
     }
 
     /**
+     * Admin per E-Mail benachrichtigen wenn 2. Erinnerungstemplate fehlt
+     */
+    private static function notify_admin_missing_template($order) {
+        $admin_email = get_option('admin_email');
+        $subject = '[ParkourONE] 2. Erinnerungsmail konnte nicht gesendet werden';
+        $body = sprintf(
+            "Die 2. Erinnerungsmail für Bestellung #%s (%s %s) konnte nicht gesendet werden, weil der E-Mail-Inhalt nicht konfiguriert ist.\n\n" .
+            "Bitte gehe zu Einstellungen > E-Mails > Bestandskunde Vertrag — 2. Erinnerung und trage den E-Mail-Text ein.\n\n" .
+            "Solange der Inhalt fehlt, wird die 2. Erinnerung für KEINE Bestellung verschickt.",
+            $order->get_order_number(),
+            $order->get_billing_first_name(),
+            $order->get_billing_last_name()
+        );
+        wp_mail($admin_email, $subject, $body);
+    }
+
+    /**
      * Cron deaktivieren (bei Plugin-Deaktivierung)
      */
     public static function deactivate() {
+        // WP-Cron aufräumen
         $timestamp = wp_next_scheduled(self::CRON_HOOK);
         if ($timestamp) {
             wp_unschedule_event($timestamp, self::CRON_HOOK);
+        }
+        // Action Scheduler aufräumen
+        if (function_exists('as_unschedule_all_actions')) {
+            as_unschedule_all_actions(self::CRON_HOOK);
         }
     }
 }

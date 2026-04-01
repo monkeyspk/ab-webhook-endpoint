@@ -841,7 +841,10 @@ if ($status_key === 'bestandkundeakz') {
                                     </tr>
                                     <tr>
                                         <th scope="row">Erinnerung nach X Tagen</th>
-                                        <td><?php $this->render_number_field(['key' => 'bestandskunde_reminder_days', 'default' => 7, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die Erinnerung gesendet werden?']); ?></td>
+                                        <td>
+                                            <?php $this->render_number_field(['key' => 'bestandskunde_reminder_days', 'default' => 7, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die Erinnerung gesendet werden?']); ?>
+                                            <?php self::render_reminder_schedule_info('bestandskunde_reminder_days', 7); ?>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th scope="row">E-Mail Betreff</th>
@@ -880,7 +883,10 @@ if ($status_key === 'bestandkundeakz') {
                                     </tr>
                                     <tr>
                                         <th scope="row">2. Erinnerung nach X Tagen</th>
-                                        <td><?php $this->render_number_field(['key' => 'bestandskunde_reminder_2_days', 'default' => 14, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die 2. Erinnerung gesendet werden? (muss grösser sein als die 1. Erinnerung)']); ?></td>
+                                        <td>
+                                            <?php $this->render_number_field(['key' => 'bestandskunde_reminder_2_days', 'default' => 14, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die 2. Erinnerung gesendet werden? (muss grösser sein als die 1. Erinnerung)']); ?>
+                                            <?php self::render_reminder_schedule_info('bestandskunde_reminder_2_days', 14); ?>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th scope="row">E-Mail Betreff</th>
@@ -1810,5 +1816,48 @@ Viele Grüsse']); ?></td>
 
 
         return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
+
+    /**
+     * Zeigt eine Info-Box unter dem Tage-Feld, wann die nächste Erinnerung rausgehen würde
+     */
+    public static function render_reminder_schedule_info($days_key, $default_days) {
+        $options = get_option('ab_email_settings', []);
+        $days = isset($options[$days_key]) ? intval($options[$days_key]) : $default_days;
+
+        if ($days <= 0) return;
+
+        // Offene Bestellungen zählen
+        $orders = wc_get_orders([
+            'status' => 'bkdvertrag',
+            'limit'  => -1,
+            'return' => 'ids',
+        ]);
+        $open_count = count($orders);
+
+        // Nächsten Cron-Lauf ermitteln
+        $next_run = '';
+        if (function_exists('as_next_scheduled_action')) {
+            $next_ts = as_next_scheduled_action('ab_bestandskunde_reminder_check');
+            if ($next_ts) {
+                $next_run = date_i18n('d.m.Y H:i', $next_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
+            }
+        }
+        if (empty($next_run)) {
+            $next_ts = wp_next_scheduled('ab_bestandskunde_reminder_check');
+            if ($next_ts) {
+                $next_run = date_i18n('d.m.Y H:i', $next_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
+            }
+        }
+
+        echo '<div style="margin-top:8px; padding:8px 12px; background:#f0f6fc; border:1px solid #c8d7e1; border-radius:4px; font-size:12px; color:#333;">';
+        echo '<strong>Beispiel:</strong> Eine Bestellung, die heute in den Status "BKD Vertrag" gesetzt wird, erhält diese Erinnerung am <strong>' . date_i18n('d.m.Y', strtotime("+{$days} days")) . '</strong>';
+        if ($open_count > 0) {
+            echo '<br>Aktuell <strong>' . $open_count . ' offene Bestellung' . ($open_count > 1 ? 'en' : '') . '</strong> im Status "Bestandskunde Vertrag"';
+        }
+        if ($next_run) {
+            echo '<br>Nächste Prüfung: <strong>' . esc_html($next_run) . ' Uhr</strong> (täglich um 08:00)';
+        }
+        echo '</div>';
     }
 }

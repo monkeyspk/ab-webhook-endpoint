@@ -43,6 +43,20 @@ class AB_Rest_Endpoint {
             'callback'            => [__CLASS__, 'handle_bulk_update_status'],
             'permission_callback' => '__return_true',
         ]);
+
+        // Vertragslink für eine Bestellung abrufen
+        register_rest_route('ab/v1', '/contract-link/(?P<order_id>\d+)', [
+            'methods'             => 'GET',
+            'callback'            => [__CLASS__, 'handle_get_contract_link'],
+            'permission_callback' => '__return_true',
+            'args' => [
+                'order_id' => [
+                    'validate_callback' => function($param) {
+                        return is_numeric($param);
+                    }
+                ],
+            ],
+        ]);
     }
 
     public static function handle_update_order_status($request) {
@@ -346,6 +360,46 @@ class AB_Rest_Endpoint {
                 'success' => $success_count,
                 'errors' => $error_count
             ]
+        ];
+    }
+
+    /**
+     * GET /ab/v1/contract-link/{order_id}
+     * Gibt den Vertragslink für eine Bestellung zurück.
+     * Generiert einen Token falls noch keiner existiert.
+     */
+    public static function handle_get_contract_link($request) {
+        $order_id = intval($request['order_id']);
+        $order = wc_get_order($order_id);
+
+        if (!$order) {
+            return new WP_Error('order_not_found', 'Bestellung nicht gefunden.', ['status' => 404]);
+        }
+
+        // Nur für relevante Status
+        $allowed_statuses = ['vertragverschickt', 'bkdvertrag', 'bestandkundeakz'];
+        if (!in_array($order->get_status(), $allowed_statuses)) {
+            return new WP_Error('invalid_status', 'Bestellung hat keinen Vertragsstatus.', ['status' => 400]);
+        }
+
+        // Token holen oder generieren
+        $token = get_post_meta($order_id, '_ab_contract_token', true);
+        if (empty($token)) {
+            $token = wp_generate_password(32, false);
+            update_post_meta($order_id, '_ab_contract_token', $token);
+        }
+
+        $contract_url = add_query_arg([
+            'order_id' => $order_id,
+            'step'     => 1,
+            'token'    => $token,
+        ], home_url('/vertrag/'));
+
+        return [
+            'order_id'     => $order_id,
+            'status'       => $order->get_status(),
+            'contract_url' => $contract_url,
+            'token'        => $token,
         ];
     }
 }
