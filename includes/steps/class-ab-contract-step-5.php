@@ -46,10 +46,15 @@ class AB_Contract_Step_5 {
                             <div class="step-icon">📧</div>
                             <div class="step-text">Du erhältst eine E-Mail mit deinem Vertrag</div>
                         </div>
+                        <?php
+                        $item_5 = ab_we_get_first_event_item($order);
+                        $wa_link_5 = $item_5 ? $item_5->get_meta('_event_whatsapp_link') : '';
+                        if (!empty($wa_link_5)): ?>
                         <div class="step-item">
                             <div class="step-icon">💬</div>
                             <div class="step-text">Wir senden dir einen Link zur WhatsApp-Gruppe deiner Klasse</div>
                         </div>
+                        <?php endif; ?>
                         <div class="step-item">
                             <div class="step-icon">🎓</div>
                             <div class="step-text">Du bekommst Zugangsdaten zum ParkourONE Academyboard</div>

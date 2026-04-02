@@ -193,7 +193,12 @@ class AB_Contract_Step_4 {
                     <h4>Super, fast geschafft! Wenn deine Daten alle stimmen, kannst du jetzt deinen Vertrag abschließen. Danach bekommst du:</h4>
                     <ul style="margin-left: 1.5rem; list-style-type: disc;">
                         <li>Deinen Vertrag direkt per E-Mail</li>
+                        <?php
+                        $item_4 = ab_we_get_first_event_item($order);
+                        $wa_link_4 = $item_4 ? $item_4->get_meta('_event_whatsapp_link') : '';
+                        if (!empty($wa_link_4)): ?>
                         <li>Einen Link zur Whatsapp-Gruppe deiner Klasse</li>
+                        <?php endif; ?>
                         <li>Zugang zum ParkourONE Academyboard für die Einsicht deiner nächsten Trainingstermine</li>
                     </ul>
                 </div>
