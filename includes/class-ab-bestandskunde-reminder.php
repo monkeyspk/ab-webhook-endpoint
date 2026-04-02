@@ -18,30 +18,45 @@ class AB_Bestandskunde_Reminder {
         // Action Hook registrieren (wird von WP-Cron ODER Action Scheduler aufgerufen)
         add_action(self::CRON_HOOK, [__CLASS__, 'check_and_send_reminders']);
 
-        // Action Scheduler nutzen falls verfügbar (zuverlässiger als WP-Cron)
+        // Action Scheduler Setup erst ausführen wenn AS bereit ist
+        add_action('action_scheduler_init', [__CLASS__, 'schedule_with_action_scheduler']);
+
+        // Fallback: WP-Cron falls Action Scheduler nicht verfügbar
+        add_action('init', [__CLASS__, 'maybe_schedule_wp_cron']);
+    }
+
+    /**
+     * Action Scheduler nutzen (wird aufgerufen wenn AS initialisiert ist)
+     */
+    public static function schedule_with_action_scheduler() {
+        // Alten WP-Cron entfernen falls noch vorhanden
+        $wp_cron_ts = wp_next_scheduled(self::CRON_HOOK);
+        if ($wp_cron_ts) {
+            wp_unschedule_event($wp_cron_ts, self::CRON_HOOK);
+        }
+        // Täglich um 08:00 Uhr
+        if (as_next_scheduled_action(self::CRON_HOOK) === false) {
+            $timezone = new DateTimeZone(wp_timezone_string());
+            $tomorrow_8am = new DateTime('tomorrow 08:00', $timezone);
+            as_schedule_recurring_action(
+                $tomorrow_8am->getTimestamp(),
+                DAY_IN_SECONDS,
+                self::CRON_HOOK,
+                [],
+                'ab-bestandskunde-reminder'
+            );
+        }
+    }
+
+    /**
+     * Fallback: WP-Cron nur wenn Action Scheduler nicht verfügbar
+     */
+    public static function maybe_schedule_wp_cron() {
         if (function_exists('as_next_scheduled_action')) {
-            // Alten WP-Cron entfernen falls noch vorhanden
-            $wp_cron_ts = wp_next_scheduled(self::CRON_HOOK);
-            if ($wp_cron_ts) {
-                wp_unschedule_event($wp_cron_ts, self::CRON_HOOK);
-            }
-            // Action Scheduler: täglich um 08:00 Uhr
-            if (as_next_scheduled_action(self::CRON_HOOK) === false) {
-                $timezone = new DateTimeZone(wp_timezone_string());
-                $tomorrow_8am = new DateTime('tomorrow 08:00', $timezone);
-                as_schedule_recurring_action(
-                    $tomorrow_8am->getTimestamp(),
-                    DAY_IN_SECONDS,
-                    self::CRON_HOOK,
-                    [],
-                    'ab-bestandskunde-reminder'
-                );
-            }
-        } else {
-            // Fallback: WP-Cron
-            if (!wp_next_scheduled(self::CRON_HOOK)) {
-                wp_schedule_event(time(), 'daily', self::CRON_HOOK);
-            }
+            return; // Action Scheduler übernimmt
+        }
+        if (!wp_next_scheduled(self::CRON_HOOK)) {
+            wp_schedule_event(time(), 'daily', self::CRON_HOOK);
         }
     }
 
