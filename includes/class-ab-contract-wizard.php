@@ -507,6 +507,9 @@ class AB_Contract_Wizard {
         if (!empty($contract_data['bank_name'])) {
             update_post_meta($order->get_id(), '_billing_bank_name', $contract_data['bank_name']);
         }
+        if (!empty($contract_data['ahv_nummer'])) {
+            update_post_meta($order->get_id(), '_billing_ahv_nummer', $contract_data['ahv_nummer']);
+        }
 
         $current_status = $order->get_status();
         if ($current_status === 'bkdvertrag') {
