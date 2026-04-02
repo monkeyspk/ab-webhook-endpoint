@@ -45,6 +45,23 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-ab-schueler-uebersicht.
 require_once plugin_dir_path(__FILE__) . 'includes/github-updater.php';
 
 
+// TWINT-Plugin lädt fehlerhaftes JS auf Admin-Order-Seite (chosen is not a function)
+// Das blockiert das Speichern von Billing-Feldern inkl. E-Mail-Änderung.
+add_action('admin_enqueue_scripts', function() {
+    $screen = get_current_screen();
+    if ($screen && $screen->id === 'shop_order') {
+        // Alle TWINT-Scripts auf der Order-Edit-Seite entfernen
+        global $wp_scripts;
+        if (isset($wp_scripts->registered)) {
+            foreach ($wp_scripts->registered as $handle => $script) {
+                if (strpos($handle, 'mame_tw') !== false || (isset($script->src) && strpos($script->src, 'mame-twint') !== false)) {
+                    wp_dequeue_script($handle);
+                }
+            }
+        }
+    }
+}, 999);
+
 add_action('wp_enqueue_scripts', function() {
     if (has_shortcode(get_post()->post_content, 'ab_contract_wizard')) {
         wp_enqueue_style(
