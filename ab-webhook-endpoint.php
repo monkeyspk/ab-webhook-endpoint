@@ -21,6 +21,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/ab-shortcodes.php'; // Shortc
 require_once plugin_dir_path(__FILE__) . 'includes/helper-functions.php'; // Falls du Hilfsfunktionen brauchst
 // require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-page.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-types.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-ab-eintrittsdatum.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-wizard.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-ajax-handler.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-overview.php';

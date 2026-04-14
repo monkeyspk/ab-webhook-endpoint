@@ -516,6 +516,12 @@ class AB_Contract_Wizard {
             $order->update_status('bestandkundeakz', 'Bestandskunde-Vertrag abgeschlossen.');
             AB_Email_Sender::send_status_email($order->get_id(), 'wc-bestandkundeakz');
         } else {
+            // Eintrittsdatum einmalig setzen (nur beim allerersten Schüler-Werden).
+            // Wird nicht überschrieben bei erneutem Vertragsabschluss.
+            if (class_exists('AB_Eintrittsdatum')) {
+                AB_Eintrittsdatum::set_if_empty_for_order($order);
+            }
+
             $order->update_status('schuelerin', 'Vertrag abgeschlossen.');
             AB_Email_Sender::send_status_email($order->get_id(), 'wc-schuelerin');
         }
