@@ -233,8 +233,17 @@ class AB_Bestandskunde_Reminder {
         $subject = str_replace(array_keys($replacements), array_values($replacements), $subject);
         $content = str_replace(array_keys($replacements), array_values($replacements), $content);
 
-        // Shortcodes im Content verarbeiten (für [contract_link] etc.)
+        // Globale Order-Variable setzen damit alle Shortcodes
+        // ([contract_link], [first_participant_first_name], etc.) funktionieren
+        global $ab_current_order;
+        $previous_order = $ab_current_order;
+        $ab_current_order = $order;
+
+        // Legacy-Platzhalter {contract_link} weiter unterstützen
         $content = do_shortcode(str_replace('{contract_link}', '[contract_link order_id="' . $order->get_id() . '"]', $content));
+
+        // Globale Variable wiederherstellen
+        $ab_current_order = $previous_order;
 
         // Absender
         $sender_email = $options['sender_email'] ?? get_option('admin_email');
