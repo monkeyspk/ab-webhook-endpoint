@@ -30,7 +30,8 @@ class AB_Controlling_Report {
 
     public static function default_settings() {
         return [
-            'enabled'                    => 0,
+            // Default aktiv — kann im Admin deaktiviert werden und bleibt dann auch deaktiviert.
+            'enabled'                    => 1,
             'recipients'                 => get_option('admin_email'),
             'vertragverschickt_days'     => 14,
             'run_hour'                   => 8,
