@@ -44,8 +44,8 @@ class AB_Bestandskunde_Reminder {
     }
 
     public static function render_admin_page() {
-        // Statistik: wie viele Orders sind betroffen?
-        $orders = wc_get_orders([
+        // Reminder 1: Orders mit gesendetem 1. Reminder (für Re-Send)
+        $orders_r1 = wc_get_orders([
             'status' => ['bkdvertrag'],
             'limit'  => -1,
             'meta_query' => [
@@ -56,46 +56,96 @@ class AB_Bestandskunde_Reminder {
                 ],
             ],
         ]);
+        $count_r1 = count($orders_r1);
 
-        $affected_count = count($orders);
+        // Reminder 2: Orders mit gesendetem 1., aber NICHT 2. Reminder
+        $orders_r2 = array_filter($orders_r1, function($o) {
+            return get_post_meta($o->get_id(), '_ab_bestandskunde_reminder_2_sent', true) !== 'yes';
+        });
+        $count_r2 = count($orders_r2);
+
         $notice = '';
         if (isset($_GET['done'])) {
             $sent = intval($_GET['sent']);
-            $reset = intval($_GET['reset']);
-            $notice = '<div class="notice notice-success"><p><strong>Fertig:</strong> ' . $reset . ' Reminder-Flags zurückgesetzt, ' . $sent . ' Mails neu versendet.</p></div>';
+            $rnum = intval($_GET['reminder'] ?? 1);
+            $notice = '<div class="notice notice-success"><p><strong>Fertig:</strong> ' . $sent . ' Mails der ' . $rnum . '. Erinnerung versendet.</p></div>';
         }
 
         ?>
         <div class="wrap">
-            <h1>Bestandskunden-Reminder neu senden</h1>
+            <h1>Bestandskunden-Reminder verwalten</h1>
             <?php echo $notice; ?>
-            <p>Diese Aktion setzt das "Reminder gesendet"-Flag bei allen Orders im Status <strong>"Bestandskunde Vertrag"</strong> zurück und sendet die 1. Reminder-Mail nochmal sofort.</p>
-            <p>Sinnvoll wenn die zuvor gesendeten Mails einen defekten Button hatten und die Kunden den Vertrag noch nicht abgeschlossen haben.</p>
 
-            <h2>Aktuelle Situation</h2>
-            <p><strong><?php echo $affected_count; ?></strong> offene Verträge mit bereits gesendetem 1. Reminder.</p>
+            <p>Hier kannst du die 1. oder 2. Erinnerungs-Mail an Kunden im Status <strong>"Bestandskunde Vertrag"</strong> auslösen, ohne auf den Cron zu warten.</p>
 
-            <?php if ($affected_count > 0): ?>
-            <h3>Betroffene Bestellungen</h3>
-            <ul style="max-height:300px;overflow-y:auto;background:#fff;padding:1em;border:1px solid #ccd0d4;">
-                <?php foreach ($orders as $o): ?>
-                <li>
-                    Order #<?php echo $o->get_order_number(); ?> —
-                    <?php echo esc_html($o->get_billing_first_name() . ' ' . $o->get_billing_last_name()); ?>
-                    (<?php echo esc_html($o->get_billing_email()); ?>)
-                </li>
-                <?php endforeach; ?>
-            </ul>
+            <hr />
+
+            <h2>1. Erinnerung neu senden</h2>
+            <p>Setzt das "1. Reminder gesendet"-Flag zurück und sendet die 1. Erinnerung nochmal an alle, die sie schon bekommen haben. Sinnvoll wenn die ursprüngliche Mail defekt war.</p>
+            <p><strong><?php echo $count_r1; ?></strong> offene Verträge mit bereits gesendetem 1. Reminder.</p>
+
+            <?php if ($count_r1 > 0): ?>
+            <details>
+                <summary style="cursor:pointer;color:#0066cc;">Bestellungen anzeigen (<?php echo $count_r1; ?>)</summary>
+                <ul style="max-height:200px;overflow-y:auto;background:#fff;padding:1em;border:1px solid #ccd0d4;margin-top:8px;">
+                    <?php foreach ($orders_r1 as $o): ?>
+                    <li>#<?php echo $o->get_order_number(); ?> — <?php echo esc_html($o->get_billing_first_name() . ' ' . $o->get_billing_last_name()); ?> (<?php echo esc_html($o->get_billing_email()); ?>)</li>
+                    <?php endforeach; ?>
+                </ul>
+            </details>
             <?php endif; ?>
 
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:24px;">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:16px;">
                 <input type="hidden" name="action" value="ab_resend_bestandskunde_reminders" />
+                <input type="hidden" name="reminder_number" value="1" />
                 <?php wp_nonce_field('ab_resend_reminders_nonce'); ?>
                 <button type="submit"
                         class="button button-primary"
-                        <?php disabled($affected_count, 0); ?>
-                        onclick="return confirm('Wirklich <?php echo $affected_count; ?> Reminder-Mails neu senden?');">
-                    Reminder neu senden (<?php echo $affected_count; ?>)
+                        <?php disabled($count_r1, 0); ?>
+                        onclick="return confirm('Wirklich <?php echo $count_r1; ?> Mails der 1. Erinnerung neu senden?');">
+                    1. Erinnerung neu senden (<?php echo $count_r1; ?>)
+                </button>
+            </form>
+
+            <hr style="margin-top:32px;" />
+
+            <h2>2. Erinnerung jetzt senden</h2>
+            <p>Sendet die 2. Erinnerung an alle Kunden die schon den 1. Reminder bekommen haben, aber den Vertrag noch nicht abgeschlossen haben. Funktioniert auch wenn die im Cron eingestellten Tage noch nicht vergangen sind.</p>
+            <p><strong><?php echo $count_r2; ?></strong> Bestellungen warten auf 2. Erinnerung.</p>
+
+            <?php if ($count_r2 > 0): ?>
+            <details>
+                <summary style="cursor:pointer;color:#0066cc;">Bestellungen anzeigen (<?php echo $count_r2; ?>)</summary>
+                <ul style="max-height:200px;overflow-y:auto;background:#fff;padding:1em;border:1px solid #ccd0d4;margin-top:8px;">
+                    <?php foreach ($orders_r2 as $o): ?>
+                    <li>#<?php echo $o->get_order_number(); ?> — <?php echo esc_html($o->get_billing_first_name() . ' ' . $o->get_billing_last_name()); ?> (<?php echo esc_html($o->get_billing_email()); ?>)</li>
+                    <?php endforeach; ?>
+                </ul>
+            </details>
+            <?php endif; ?>
+
+            <?php
+            // Prüfen ob 2. Reminder konfiguriert ist
+            $options = get_option('ab_email_settings', []);
+            $r2_enabled = !empty($options['send_email_bestandskunde_reminder_2']);
+            $r2_content = !empty($options['content_bestandskunde_reminder_2']);
+            ?>
+
+            <?php if (!$r2_enabled): ?>
+            <p style="color:#d63638;"><strong>⚠ 2. Erinnerung ist im E-Mail-Customizer deaktiviert.</strong> Aktiviere sie zuerst unter Einstellungen → E-Mails.</p>
+            <?php elseif (!$r2_content): ?>
+            <p style="color:#d63638;"><strong>⚠ 2. Erinnerung hat keinen E-Mail-Inhalt.</strong> Hinterlege einen Inhalt unter Einstellungen → E-Mails.</p>
+            <?php endif; ?>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:16px;">
+                <input type="hidden" name="action" value="ab_resend_bestandskunde_reminders" />
+                <input type="hidden" name="reminder_number" value="2" />
+                <?php wp_nonce_field('ab_resend_reminders_nonce'); ?>
+                <button type="submit"
+                        class="button button-primary"
+                        <?php disabled($count_r2 == 0 || !$r2_enabled || !$r2_content); ?>
+                        onclick="return confirm('Wirklich <?php echo $count_r2; ?> Mails der 2. Erinnerung senden?');">
+                    2. Erinnerung jetzt senden (<?php echo $count_r2; ?>)
                 </button>
             </form>
         </div>
@@ -103,7 +153,7 @@ class AB_Bestandskunde_Reminder {
     }
 
     /**
-     * Handler für den Resend-Button.
+     * Handler für den Resend-Button. Nimmt reminder_number (1 oder 2).
      */
     public static function handle_resend_action() {
         if (!current_user_can('manage_woocommerce')) {
@@ -111,6 +161,12 @@ class AB_Bestandskunde_Reminder {
         }
         check_admin_referer('ab_resend_reminders_nonce');
 
+        $reminder_number = intval($_POST['reminder_number'] ?? 1);
+        if (!in_array($reminder_number, [1, 2], true)) {
+            wp_die('Ungültige Reminder-Nummer');
+        }
+
+        // Basis-Query: alle Orders im bkdvertrag-Status mit gesendetem 1. Reminder
         $orders = wc_get_orders([
             'status' => ['bkdvertrag'],
             'limit'  => -1,
@@ -123,31 +179,44 @@ class AB_Bestandskunde_Reminder {
             ],
         ]);
 
-        $reset = 0;
         $sent = 0;
 
         foreach ($orders as $order) {
             $order_id = $order->get_id();
-            // Flag zurücksetzen
-            delete_post_meta($order_id, '_ab_bestandskunde_reminder_sent');
-            delete_post_meta($order_id, '_ab_bestandskunde_reminder_date');
-            $reset++;
 
-            // Mail sofort neu senden
-            $success = self::send_reminder_email($order, 1);
-            if ($success) {
-                update_post_meta($order_id, '_ab_bestandskunde_reminder_sent', 'yes');
-                update_post_meta($order_id, '_ab_bestandskunde_reminder_date', current_time('mysql'));
-                $sent++;
-                error_log('[AB Reminder] Manuell neu gesendet für Order #' . $order_id);
+            if ($reminder_number === 1) {
+                // 1. Reminder neu senden — Flag zurücksetzen
+                delete_post_meta($order_id, '_ab_bestandskunde_reminder_sent');
+                delete_post_meta($order_id, '_ab_bestandskunde_reminder_date');
+
+                $success = self::send_reminder_email($order, 1);
+                if ($success) {
+                    update_post_meta($order_id, '_ab_bestandskunde_reminder_sent', 'yes');
+                    update_post_meta($order_id, '_ab_bestandskunde_reminder_date', current_time('mysql'));
+                    $sent++;
+                    error_log('[AB Reminder] 1. Reminder manuell neu gesendet für Order #' . $order_id);
+                }
+            } else {
+                // 2. Reminder: nur senden wenn noch nicht gesendet
+                if (get_post_meta($order_id, '_ab_bestandskunde_reminder_2_sent', true) === 'yes') {
+                    continue;
+                }
+
+                $success = self::send_reminder_email($order, 2);
+                if ($success) {
+                    update_post_meta($order_id, '_ab_bestandskunde_reminder_2_sent', 'yes');
+                    update_post_meta($order_id, '_ab_bestandskunde_reminder_2_date', current_time('mysql'));
+                    $sent++;
+                    error_log('[AB Reminder] 2. Reminder manuell gesendet für Order #' . $order_id);
+                }
             }
         }
 
         wp_safe_redirect(add_query_arg([
-            'page'  => 'ab-bestandskunde-reminder',
-            'done'  => 1,
-            'sent'  => $sent,
-            'reset' => $reset,
+            'page'     => 'ab-bestandskunde-reminder',
+            'done'     => 1,
+            'sent'     => $sent,
+            'reminder' => $reminder_number,
         ], admin_url('admin.php')));
         exit;
     }
