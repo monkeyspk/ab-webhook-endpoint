@@ -129,9 +129,10 @@ class AB_Controlling_Report {
             }
         }
 
-        // Nach Datum sortieren (älteste zuerst — am kritischsten)
+        // Sortierung: ältestes/frühestes Datum OBEN, aktuellstes UNTEN
+        // (älteste Überfälligkeit = kritischster Fall, gehört ganz nach oben)
         usort($overdue_probetrainings, function($a, $b) {
-            return strcmp($a['event_date'], $b['event_date']);
+            return strtotime($a['event_date']) <=> strtotime($b['event_date']);
         });
 
         // 2) Vertrag verschickt seit > X Tagen
@@ -164,8 +165,9 @@ class AB_Controlling_Report {
             }
         }
 
+        // Sortierung: frühestes Versand-Datum OBEN (am längsten offen = kritischster Fall)
         usort($overdue_vertragverschickt, function($a, $b) {
-            return strcmp($a['since'], $b['since']);
+            return strtotime($a['since']) <=> strtotime($b['since']);
         });
 
         return [
