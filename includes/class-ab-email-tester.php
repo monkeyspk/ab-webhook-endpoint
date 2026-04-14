@@ -18,17 +18,17 @@ class AB_Email_Tester {
     }
 
     /**
-     * Position 92: gruppiert mit Bestandskunden-Tools am Ende des Menüs.
+     * Wird vom AB_Admin_Menu_Organizer direkt nach E-Mail Customizer
+     * in die Gruppe "Verträge & Kunden" einsortiert.
      */
     public static function add_admin_page() {
         add_submenu_page(
             'parkourone',
             'E-Mail Tester',
-            '— E-Mail Tester',
+            'E-Mail Tester',
             'manage_woocommerce',
             'ab-email-tester',
-            [__CLASS__, 'render_admin_page'],
-            92
+            [__CLASS__, 'render_admin_page']
         );
     }
 

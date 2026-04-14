@@ -36,8 +36,7 @@ class AB_Bestandskunden_Import {
             'Bestandskunden Import',
             'manage_woocommerce',
             'ab-bestandskunden-import',
-            [__CLASS__, 'render_page'],
-            90
+            [__CLASS__, 'render_page']
         );
     }
 

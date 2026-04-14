@@ -30,8 +30,10 @@ class AB_Admin_Menu_Organizer {
                 'ab-customers',
                 'ab-schueler-uebersicht',
                 'ab-email-customizer',
+                'ab-email-tester',
                 'ab-gutschein-settings',
                 'ab-bestandskunden-import',
+                'ab-bestandskunde-reminder',
                 'ab-settings',
             ]
         ],
