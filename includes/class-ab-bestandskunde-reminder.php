@@ -23,6 +23,133 @@ class AB_Bestandskunde_Reminder {
 
         // Fallback: WP-Cron falls Action Scheduler nicht verfügbar
         add_action('init', [__CLASS__, 'maybe_schedule_wp_cron']);
+
+        // Admin: Tools-Seite + Resend-Action
+        add_action('admin_menu', [__CLASS__, 'add_admin_page'], 20);
+        add_action('admin_post_ab_resend_bestandskunde_reminders', [__CLASS__, 'handle_resend_action']);
+    }
+
+    /**
+     * Admin-Tools-Seite zum Zurücksetzen und Neu-Senden der Reminder.
+     */
+    public static function add_admin_page() {
+        add_submenu_page(
+            'parkourone',
+            'Bestandskunden-Reminder',
+            'Bestandskunden-Reminder',
+            'manage_woocommerce',
+            'ab-bestandskunde-reminder',
+            [__CLASS__, 'render_admin_page']
+        );
+    }
+
+    public static function render_admin_page() {
+        // Statistik: wie viele Orders sind betroffen?
+        $orders = wc_get_orders([
+            'status' => ['bkdvertrag'],
+            'limit'  => -1,
+            'meta_query' => [
+                [
+                    'key'     => '_ab_bestandskunde_reminder_sent',
+                    'value'   => 'yes',
+                    'compare' => '=',
+                ],
+            ],
+        ]);
+
+        $affected_count = count($orders);
+        $notice = '';
+        if (isset($_GET['done'])) {
+            $sent = intval($_GET['sent']);
+            $reset = intval($_GET['reset']);
+            $notice = '<div class="notice notice-success"><p><strong>Fertig:</strong> ' . $reset . ' Reminder-Flags zurückgesetzt, ' . $sent . ' Mails neu versendet.</p></div>';
+        }
+
+        ?>
+        <div class="wrap">
+            <h1>Bestandskunden-Reminder neu senden</h1>
+            <?php echo $notice; ?>
+            <p>Diese Aktion setzt das "Reminder gesendet"-Flag bei allen Orders im Status <strong>"Bestandskunde Vertrag"</strong> zurück und sendet die 1. Reminder-Mail nochmal sofort.</p>
+            <p>Sinnvoll wenn die zuvor gesendeten Mails einen defekten Button hatten und die Kunden den Vertrag noch nicht abgeschlossen haben.</p>
+
+            <h2>Aktuelle Situation</h2>
+            <p><strong><?php echo $affected_count; ?></strong> offene Verträge mit bereits gesendetem 1. Reminder.</p>
+
+            <?php if ($affected_count > 0): ?>
+            <h3>Betroffene Bestellungen</h3>
+            <ul style="max-height:300px;overflow-y:auto;background:#fff;padding:1em;border:1px solid #ccd0d4;">
+                <?php foreach ($orders as $o): ?>
+                <li>
+                    Order #<?php echo $o->get_order_number(); ?> —
+                    <?php echo esc_html($o->get_billing_first_name() . ' ' . $o->get_billing_last_name()); ?>
+                    (<?php echo esc_html($o->get_billing_email()); ?>)
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php endif; ?>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:24px;">
+                <input type="hidden" name="action" value="ab_resend_bestandskunde_reminders" />
+                <?php wp_nonce_field('ab_resend_reminders_nonce'); ?>
+                <button type="submit"
+                        class="button button-primary"
+                        <?php disabled($affected_count, 0); ?>
+                        onclick="return confirm('Wirklich <?php echo $affected_count; ?> Reminder-Mails neu senden?');">
+                    Reminder neu senden (<?php echo $affected_count; ?>)
+                </button>
+            </form>
+        </div>
+        <?php
+    }
+
+    /**
+     * Handler für den Resend-Button.
+     */
+    public static function handle_resend_action() {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die('Keine Berechtigung');
+        }
+        check_admin_referer('ab_resend_reminders_nonce');
+
+        $orders = wc_get_orders([
+            'status' => ['bkdvertrag'],
+            'limit'  => -1,
+            'meta_query' => [
+                [
+                    'key'     => '_ab_bestandskunde_reminder_sent',
+                    'value'   => 'yes',
+                    'compare' => '=',
+                ],
+            ],
+        ]);
+
+        $reset = 0;
+        $sent = 0;
+
+        foreach ($orders as $order) {
+            $order_id = $order->get_id();
+            // Flag zurücksetzen
+            delete_post_meta($order_id, '_ab_bestandskunde_reminder_sent');
+            delete_post_meta($order_id, '_ab_bestandskunde_reminder_date');
+            $reset++;
+
+            // Mail sofort neu senden
+            $success = self::send_reminder_email($order, 1);
+            if ($success) {
+                update_post_meta($order_id, '_ab_bestandskunde_reminder_sent', 'yes');
+                update_post_meta($order_id, '_ab_bestandskunde_reminder_date', current_time('mysql'));
+                $sent++;
+                error_log('[AB Reminder] Manuell neu gesendet für Order #' . $order_id);
+            }
+        }
+
+        wp_safe_redirect(add_query_arg([
+            'page'  => 'ab-bestandskunde-reminder',
+            'done'  => 1,
+            'sent'  => $sent,
+            'reset' => $reset,
+        ], admin_url('admin.php')));
+        exit;
     }
 
     /**
