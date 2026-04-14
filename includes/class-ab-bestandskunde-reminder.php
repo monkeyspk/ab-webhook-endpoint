@@ -295,8 +295,9 @@ class AB_Bestandskunde_Reminder {
 
     /**
      * Erinnerungs-E-Mail senden (nutzt die gleiche Infrastruktur wie alle anderen Mails)
+     * Public damit der E-Mail-Tester sie aufrufen kann.
      */
-    private static function send_reminder_email($order, $reminder_number = 1) {
+    public static function send_reminder_email($order, $reminder_number = 1) {
         $options = get_option('ab_email_settings', []);
 
         $to = $order->get_billing_email();

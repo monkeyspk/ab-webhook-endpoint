@@ -14,6 +14,7 @@ class AB_Email_Tester {
         add_action('admin_menu', [__CLASS__, 'add_admin_page'], 25);
         add_action('admin_post_ab_send_test_email', [__CLASS__, 'handle_test_send']);
         add_action('admin_post_ab_send_all_test_emails', [__CLASS__, 'handle_test_send_all']);
+        add_action('admin_post_ab_send_test_reminder', [__CLASS__, 'handle_test_reminder']);
     }
 
     public static function add_admin_page() {
@@ -156,6 +157,62 @@ class AB_Email_Tester {
                 </tbody>
             </table>
 
+            <h2 style="margin-top:32px;">Reminder-E-Mails</h2>
+            <p>Erinnerungs-Mails an Bestandskunden, die ihren Vertrag noch nicht abgeschlossen haben.</p>
+
+            <table class="wp-list-table widefat striped">
+                <thead>
+                    <tr>
+                        <th>Reminder</th>
+                        <th>Aktiviert</th>
+                        <th>Betreff</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php
+                $reminders = [
+                    1 => [
+                        'label'   => '1. Bestandskunden-Reminder',
+                        'enabled' => true, // 1. Reminder läuft immer wenn days > 0
+                        'subject' => $email_settings['subject_bestandskunde_reminder'] ?? 'Erinnerung: Bitte Vertrag abschließen',
+                    ],
+                    2 => [
+                        'label'   => '2. Bestandskunden-Reminder',
+                        'enabled' => !empty($email_settings['send_email_bestandskunde_reminder_2']),
+                        'subject' => $email_settings['subject_bestandskunde_reminder_2'] ?? 'Letzte Erinnerung: Vertrag noch offen',
+                    ],
+                ];
+                foreach ($reminders as $num => $r):
+                ?>
+                    <tr>
+                        <td><strong><?php echo esc_html($r['label']); ?></strong></td>
+                        <td>
+                            <?php if ($r['enabled']): ?>
+                                <span style="color:#00a32a;">✓ Ja</span>
+                            <?php else: ?>
+                                <span style="color:#d63638;">✗ Nein</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo wp_kses_post($r['subject']); ?></td>
+                        <td>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
+                                <input type="hidden" name="action" value="ab_send_test_reminder" />
+                                <input type="hidden" name="reminder_number" value="<?php echo intval($num); ?>" />
+                                <input type="hidden" name="recipient" value="<?php echo esc_attr($selected_email); ?>" />
+                                <input type="hidden" name="order_id" value="<?php echo esc_attr($selected_order_id); ?>" />
+                                <?php wp_nonce_field('ab_test_email_nonce'); ?>
+                                <button type="submit" class="button"
+                                    <?php if (!$r['enabled'] || !$selected_order_id) echo 'disabled'; ?>>
+                                    Test senden
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
             <h2 style="margin-top:32px;">Hinweise</h2>
             <ul style="list-style:disc;margin-left:24px;">
                 <li>Test-Mails werden an die oben angegebene Empfänger-Adresse versendet, NICHT an die Billing-E-Mail der Order.</li>
@@ -248,6 +305,72 @@ class AB_Email_Tester {
             'count'     => $sent,
             'to'        => $recipient,
         ], admin_url('admin.php')));
+        exit;
+    }
+
+    /**
+     * Handler: Test-Reminder senden (1 oder 2).
+     */
+    public static function handle_test_reminder() {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die('Keine Berechtigung');
+        }
+        check_admin_referer('ab_test_email_nonce');
+
+        $reminder_number = intval($_POST['reminder_number'] ?? 1);
+        $recipient = sanitize_email($_POST['recipient'] ?? '');
+        $order_id = intval($_POST['order_id'] ?? 0);
+
+        if (empty($recipient) || !is_email($recipient) || empty($order_id)) {
+            wp_safe_redirect(add_query_arg([
+                'page'   => 'ab-email-tester',
+                'result' => 'error',
+                'msg'    => 'Empfänger oder Order ungültig',
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            wp_safe_redirect(add_query_arg([
+                'page'   => 'ab-email-tester',
+                'result' => 'error',
+                'msg'    => 'Order #' . $order_id . ' nicht gefunden',
+            ], admin_url('admin.php')));
+            exit;
+        }
+
+        // Subject mit [TEST] prefixen + an Test-Adresse umleiten
+        $override_filter = function($args) use ($recipient) {
+            $args['to'] = $recipient;
+            $args['subject'] = '[TEST] ' . $args['subject'];
+            return $args;
+        };
+        add_filter('wp_mail', $override_filter, 999);
+
+        $result = false;
+        try {
+            $result = AB_Bestandskunde_Reminder::send_reminder_email($order, $reminder_number);
+            // send_reminder_email setzt KEINE Tracking-Meta auf der Order
+            // (das macht nur check_and_send_reminders), also keine Cleanup nötig
+        } finally {
+            remove_filter('wp_mail', $override_filter, 999);
+        }
+
+        $args = [
+            'page'      => 'ab-email-tester',
+            'recipient' => $recipient,
+            'order_id'  => $order_id,
+        ];
+        if ($result) {
+            $args['result'] = 'success';
+            $args['count']  = 1;
+            $args['to']     = $recipient;
+        } else {
+            $args['result'] = 'error';
+            $args['msg']    = 'Reminder ' . $reminder_number . ' Versand fehlgeschlagen — möglicherweise kein Inhalt konfiguriert';
+        }
+        wp_safe_redirect(add_query_arg($args, admin_url('admin.php')));
         exit;
     }
 
