@@ -43,6 +43,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-ab-admin-menu-organizer
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-combined-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-bestandskunden-import.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-bestandskunde-reminder.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-ab-controlling-report.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-schueler-uebersicht.php';
 require_once plugin_dir_path(__FILE__) . 'includes/github-updater.php';
 
@@ -123,6 +124,9 @@ function ab_we_init_plugin() {
 
     // Bestandskunde-Erinnerung (Cron)
     AB_Bestandskunde_Reminder::init();
+
+    // Controlling-Report (tägliches Admin-Kontroll-Mail)
+    AB_Controlling_Report::init();
 
     // Schüler-Übersicht
     AB_Schueler_Uebersicht::init();

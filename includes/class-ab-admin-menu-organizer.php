@@ -34,6 +34,7 @@ class AB_Admin_Menu_Organizer {
                 'ab-gutschein-settings',
                 'ab-bestandskunden-import',
                 'ab-bestandskunde-reminder',
+                'ab-controlling-report',
                 'ab-settings',
             ]
         ],
