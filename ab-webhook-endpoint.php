@@ -17,6 +17,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-ab-rest-endpoint.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-bulk-actions.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-email-sender.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-ab-email-customizer.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-ab-email-tester.php';
 require_once plugin_dir_path(__FILE__) . 'includes/ab-shortcodes.php'; // Shortcodes
 require_once plugin_dir_path(__FILE__) . 'includes/helper-functions.php'; // Falls du Hilfsfunktionen brauchst
 // require_once plugin_dir_path(__FILE__) . 'includes/class-ab-contract-page.php';
