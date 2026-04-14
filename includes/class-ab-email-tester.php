@@ -17,14 +17,18 @@ class AB_Email_Tester {
         add_action('admin_post_ab_send_test_reminder', [__CLASS__, 'handle_test_reminder']);
     }
 
+    /**
+     * Position 92: gruppiert mit Bestandskunden-Tools am Ende des Menüs.
+     */
     public static function add_admin_page() {
         add_submenu_page(
             'parkourone',
             'E-Mail Tester',
-            'E-Mail Tester',
+            '— E-Mail Tester',
             'manage_woocommerce',
             'ab-email-tester',
-            [__CLASS__, 'render_admin_page']
+            [__CLASS__, 'render_admin_page'],
+            92
         );
     }
 

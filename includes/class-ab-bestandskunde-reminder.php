@@ -31,15 +31,17 @@ class AB_Bestandskunde_Reminder {
 
     /**
      * Admin-Tools-Seite zum Zurücksetzen und Neu-Senden der Reminder.
+     * Position 91: gruppiert mit Bestandskunden-Tools am Ende des Menüs.
      */
     public static function add_admin_page() {
         add_submenu_page(
             'parkourone',
             'Bestandskunden-Reminder',
-            'Bestandskunden-Reminder',
+            '— Reminder verwalten',
             'manage_woocommerce',
             'ab-bestandskunde-reminder',
-            [__CLASS__, 'render_admin_page']
+            [__CLASS__, 'render_admin_page'],
+            91
         );
     }
 
