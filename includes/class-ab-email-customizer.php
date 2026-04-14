@@ -885,7 +885,7 @@ if ($status_key === 'bestandkundeakz') {
                                         <th scope="row">2. Erinnerung nach X Tagen</th>
                                         <td>
                                             <?php $this->render_number_field(['key' => 'bestandskunde_reminder_2_days', 'default' => 14, 'min' => 1, 'max' => 90, 'description' => 'Nach wie vielen Tagen im Status "Bestandskunde Vertrag" soll die 2. Erinnerung gesendet werden? (muss grösser sein als die 1. Erinnerung)']); ?>
-                                            <?php self::render_reminder_schedule_info('bestandskunde_reminder_2_days', 14); ?>
+                                            <?php self::render_reminder_schedule_info('bestandskunde_reminder_2_days', 14, 2); ?>
                                         </td>
                                     </tr>
                                     <tr>
@@ -1819,45 +1819,91 @@ Viele Grüsse']); ?></td>
     }
 
     /**
-     * Zeigt eine Info-Box unter dem Tage-Feld, wann die nächste Erinnerung rausgehen würde
+     * Live-Info-Box: zeigt Admins genau was beim nächsten Cron-Lauf passiert.
+     *
+     * @param string $days_key      Settings-Key für Tage-Schwelle
+     * @param int    $default_days  Fallback wenn Setting fehlt
+     * @param int    $reminder_num  1 oder 2 (bestimmt Filter-Logik)
      */
-    public static function render_reminder_schedule_info($days_key, $default_days) {
-        $options = get_option('ab_email_settings', []);
-        $days = isset($options[$days_key]) ? intval($options[$days_key]) : $default_days;
+    public static function render_reminder_schedule_info($days_key, $default_days, $reminder_num = 1) {
+        if (!class_exists('AB_Bestandskunde_Reminder')) return;
 
-        if ($days <= 0) return;
+        $candidates = AB_Bestandskunde_Reminder::get_candidates($reminder_num);
+        $next_run = AB_Bestandskunde_Reminder::get_next_run_formatted();
 
-        // Offene Bestellungen zählen
-        $orders = wc_get_orders([
-            'status' => 'bkdvertrag',
-            'limit'  => -1,
-            'return' => 'ids',
-        ]);
-        $open_count = count($orders);
+        $days = $candidates['days'];
+        $enabled = $candidates['enabled'];
+        $total = $candidates['total'];
+        $eligible_count = count($candidates['eligible_now']);
+        $already_sent = $candidates['already_sent'];
 
-        // Nächsten Cron-Lauf ermitteln
-        $next_run = '';
-        if (function_exists('as_next_scheduled_action')) {
-            $next_ts = as_next_scheduled_action('ab_bestandskunde_reminder_check');
-            if ($next_ts) {
-                $next_run = date_i18n('d.m.Y H:i', $next_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
+        // Style-Variablen je nach Status
+        $box_bg = '#f0f6fc';
+        $box_border = '#c8d7e1';
+        if (!$enabled) {
+            $box_bg = '#fcf0f1';
+            $box_border = '#f0c0c2';
+        } elseif ($eligible_count > 0) {
+            $box_bg = '#f0f9ec';
+            $box_border = '#c3d9a4';
+        }
+
+        echo '<div style="margin-top:8px; padding:12px 14px; background:' . $box_bg . '; border:1px solid ' . $box_border . '; border-radius:6px; font-size:13px; color:#1d2327; line-height:1.6;">';
+
+        // Header
+        if (!$enabled) {
+            echo '<p style="margin:0 0 6px;font-weight:600;color:#d63638;">⚠ Diese Erinnerung ist deaktiviert — es wird nichts versendet.</p>';
+        } elseif ($days <= 0) {
+            echo '<p style="margin:0 0 6px;font-weight:600;color:#d63638;">⚠ Keine Tage-Schwelle konfiguriert.</p>';
+        } else {
+            echo '<p style="margin:0 0 8px;font-weight:600;">🔍 Live-Status dieser Erinnerung</p>';
+        }
+
+        // Aktuelle Fakten
+        echo '<ul style="margin:0 0 8px 0;padding-left:18px;">';
+        echo '<li><strong>' . $total . '</strong> Bestellung' . ($total === 1 ? '' : 'en') . ' insgesamt im Status „Bestandskunde Vertrag"</li>';
+
+        if ($enabled && $days > 0) {
+            if ($reminder_num === 1) {
+                echo '<li><strong>' . $already_sent . '</strong> haben die 1. Erinnerung bereits erhalten</li>';
+                echo '<li style="color:' . ($eligible_count > 0 ? '#00a32a' : '#646970') . ';font-weight:' . ($eligible_count > 0 ? '600' : 'normal') . ';">';
+                echo '<strong>' . $eligible_count . '</strong> Bestellung' . ($eligible_count === 1 ? '' : 'en') . ' bekomm' . ($eligible_count === 1 ? 't' : 'en') . ' die 1. Erinnerung beim nächsten Cron-Lauf';
+                echo '</li>';
+            } else {
+                echo '<li><strong>' . $already_sent . '</strong> haben die 2. Erinnerung bereits erhalten</li>';
+                echo '<li style="color:' . ($eligible_count > 0 ? '#00a32a' : '#646970') . ';font-weight:' . ($eligible_count > 0 ? '600' : 'normal') . ';">';
+                echo '<strong>' . $eligible_count . '</strong> Bestellung' . ($eligible_count === 1 ? '' : 'en') . ' bekomm' . ($eligible_count === 1 ? 't' : 'en') . ' die 2. Erinnerung beim nächsten Cron-Lauf';
+                echo '</li>';
             }
         }
-        if (empty($next_run)) {
-            $next_ts = wp_next_scheduled('ab_bestandskunde_reminder_check');
-            if ($next_ts) {
-                $next_run = date_i18n('d.m.Y H:i', $next_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
-            }
+        echo '</ul>';
+
+        // Beispiel-Rechnung
+        if ($enabled && $days > 0) {
+            $future_date = date_i18n('d.m.Y', strtotime("+{$days} days"));
+            echo '<p style="margin:4px 0;color:#646970;">';
+            echo '💡 <em>Beispiel: Eine Bestellung, die heute in „Bestandskunde Vertrag" wechselt, erhält die ' . $reminder_num . '. Erinnerung am <strong>' . $future_date . '</strong>.</em>';
+            echo '</p>';
         }
 
-        echo '<div style="margin-top:8px; padding:8px 12px; background:#f0f6fc; border:1px solid #c8d7e1; border-radius:4px; font-size:12px; color:#333;">';
-        echo '<strong>Beispiel:</strong> Eine Bestellung, die heute in den Status "BKD Vertrag" gesetzt wird, erhält diese Erinnerung am <strong>' . date_i18n('d.m.Y', strtotime("+{$days} days")) . '</strong>';
-        if ($open_count > 0) {
-            echo '<br>Aktuell <strong>' . $open_count . ' offene Bestellung' . ($open_count > 1 ? 'en' : '') . '</strong> im Status "Bestandskunde Vertrag"';
-        }
+        // Nächster Cron-Lauf
         if ($next_run) {
-            echo '<br>Nächste Prüfung: <strong>' . esc_html($next_run) . ' Uhr</strong> (täglich um 08:00)';
+            echo '<p style="margin:4px 0 0;color:#646970;font-size:12px;">';
+            echo '⏰ Nächste automatische Prüfung: <strong>' . esc_html($next_run) . ' Uhr</strong>';
+            echo '</p>';
         }
+
+        // Liste der eligible Orders (einklappbar)
+        if ($eligible_count > 0) {
+            echo '<details style="margin-top:8px;">';
+            echo '<summary style="cursor:pointer;color:#0066cc;font-size:12px;">Liste der ' . $eligible_count . ' betroffenen Bestellungen anzeigen</summary>';
+            echo '<ul style="max-height:200px;overflow-y:auto;background:#fff;padding:8px 24px;border:1px solid #ccd0d4;border-radius:4px;margin:6px 0 0;font-size:12px;">';
+            foreach ($candidates['eligible_now'] as $o) {
+                echo '<li>#' . esc_html($o->get_order_number()) . ' — ' . esc_html($o->get_billing_first_name() . ' ' . $o->get_billing_last_name()) . ' (' . esc_html($o->get_billing_email()) . ')</li>';
+            }
+            echo '</ul></details>';
+        }
+
         echo '</div>';
     }
 }

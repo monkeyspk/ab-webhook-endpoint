@@ -347,6 +347,102 @@ class AB_Bestandskunde_Reminder {
     }
 
     /**
+     * Liefert die Live-Kandidaten für den nächsten Cron-Lauf.
+     * Gibt dieselbe Filter-Logik zurück wie check_and_send_reminders(),
+     * damit Admins sehen was beim nächsten Lauf tatsächlich rausgeht.
+     *
+     * @param int $reminder_number 1 oder 2
+     * @return array {total:int, eligible_now:array, already_sent:int}
+     */
+    public static function get_candidates($reminder_number = 1) {
+        $options = get_option('ab_email_settings', []);
+
+        if ($reminder_number === 1) {
+            $enabled = !empty($options['send_email_bestandskunde_reminder']);
+            $days    = isset($options['bestandskunde_reminder_days']) ? intval($options['bestandskunde_reminder_days']) : 0;
+        } else {
+            $enabled = !empty($options['send_email_bestandskunde_reminder_2']);
+            $days    = isset($options['bestandskunde_reminder_2_days']) ? intval($options['bestandskunde_reminder_2_days']) : 0;
+        }
+
+        $orders = wc_get_orders([
+            'status' => 'bkdvertrag',
+            'limit'  => -1,
+        ]);
+
+        $result = [
+            'enabled'      => $enabled,
+            'days'         => $days,
+            'total'        => count($orders),
+            'eligible_now' => [],
+            'already_sent' => 0,
+            'threshold_ts' => $days > 0 ? strtotime("-{$days} days") : 0,
+        ];
+
+        if ($days <= 0 || !$enabled || empty($orders)) {
+            return $result;
+        }
+
+        foreach ($orders as $order) {
+            $order_id = $order->get_id();
+
+            // Bereits gesendet?
+            if ($reminder_number === 1) {
+                if (get_post_meta($order_id, '_ab_bestandskunde_reminder_sent', true) === 'yes') {
+                    $result['already_sent']++;
+                    continue;
+                }
+            } else {
+                // 2. Reminder: nur für Orders die schon 1. bekommen haben
+                if (get_post_meta($order_id, '_ab_bestandskunde_reminder_sent', true) !== 'yes') {
+                    continue;
+                }
+                if (get_post_meta($order_id, '_ab_bestandskunde_reminder_2_sent', true) === 'yes') {
+                    $result['already_sent']++;
+                    continue;
+                }
+            }
+
+            // Datum des Statuswechsels prüfen
+            $status_date = self::get_status_change_date($order, 'bkdvertrag');
+            if (!$status_date) {
+                continue;
+            }
+
+            if ($status_date->getTimestamp() <= $result['threshold_ts']) {
+                $result['eligible_now'][] = $order;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Nächster geplanter Cron-Lauf als formatiertes Datum.
+     */
+    public static function get_next_run_formatted() {
+        $next_ts = 0;
+        if (function_exists('as_next_scheduled_action')) {
+            $next_ts = as_next_scheduled_action(self::CRON_HOOK);
+        }
+        if (!$next_ts) {
+            $next_ts = wp_next_scheduled(self::CRON_HOOK);
+        }
+        if (!$next_ts || !is_numeric($next_ts)) {
+            return '';
+        }
+
+        // Past? → auf nächsten Tag 08:00 adjustieren für korrekte Anzeige
+        if ($next_ts < time()) {
+            $timezone = new DateTimeZone(wp_timezone_string());
+            $tomorrow = new DateTime('tomorrow 08:00', $timezone);
+            $next_ts = $tomorrow->getTimestamp();
+        }
+
+        return date_i18n('d.m.Y H:i', $next_ts + (int) get_option('gmt_offset') * HOUR_IN_SECONDS);
+    }
+
+    /**
      * Datum des letzten Status-Wechsels zu einem bestimmten Status aus den Order Notes holen
      */
     private static function get_status_change_date($order, $target_status) {
