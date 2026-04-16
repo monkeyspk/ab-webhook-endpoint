@@ -22,15 +22,27 @@ if (!function_exists('ab_map_event_description_to_contract')) {
     }
 }
 
+/**
+ * Aktueller Token (HMAC-SHA256). Neu generierte URLs verwenden diesen.
+ */
+function ab_generate_contract_pdf_token($order_id) {
+    return hash_hmac('sha256', 'contract_' . (int) $order_id, wp_salt('auth'));
+}
+
+/**
+ * Legacy-Token (md5). Nur für Abwärtskompatibilität bereits versendeter E-Mails.
+ */
+function ab_generate_contract_pdf_token_legacy($order_id) {
+    return md5('contract_' . (int) $order_id . wp_salt());
+}
+
 // Einfachere Funktion zum Generieren der PDF-URL
 function ab_get_contract_pdf_url($order_id) {
-    $token = md5('contract_' . $order_id . wp_salt());
-
     return add_query_arg(
         array(
             'ab_action' => 'view_contract',
-            'order_id' => $order_id,
-            'token' => $token
+            'order_id' => (int) $order_id,
+            'token' => ab_generate_contract_pdf_token($order_id)
         ),
         home_url()
     );
@@ -44,10 +56,12 @@ function ab_handle_pdf_request() {
         $order_id = intval($_GET['order_id']);
         $token = sanitize_text_field($_GET['token']);
 
-        // Sicherheitsüberprüfung
-        $expected_token = md5('contract_' . $order_id . wp_salt());
+        // Sicherheitsüberprüfung — akzeptiert neues HMAC-Token und (Grace-Period)
+        // das Legacy-md5-Token, damit bereits versendete E-Mails weiter funktionieren.
+        $expected_token = ab_generate_contract_pdf_token($order_id);
+        $legacy_token   = ab_generate_contract_pdf_token_legacy($order_id);
 
-        if ($token === $expected_token) {
+        if (hash_equals($expected_token, $token) || hash_equals($legacy_token, $token)) {
             $pdf_path = get_post_meta($order_id, '_ab_contract_pdf', true);
 
             if ($pdf_path && file_exists($pdf_path)) {
