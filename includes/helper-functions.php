@@ -23,6 +23,65 @@ if (!function_exists('ab_map_event_description_to_contract')) {
 }
 
 /**
+ * Konvertiert eine URL aus dem eigenen Upload/Theme-Verzeichnis in eine data:-URI,
+ * damit DomPDF Bilder ohne isRemoteEnabled rendern kann.
+ * Gibt leeren String zurück, wenn die URL extern ist (SSRF-Schutz).
+ *
+ * @param string $url
+ * @return string data-URI oder ''
+ */
+function ab_inline_local_image($url) {
+    if (empty($url) || !is_string($url)) {
+        return '';
+    }
+
+    // Nur Bilder von dieser Installation verarbeiten.
+    $site_url = site_url();
+    if (strpos($url, $site_url) !== 0) {
+        return '';
+    }
+
+    $upload_dir = wp_upload_dir();
+    $relative   = ltrim(str_replace($site_url, '', $url), '/');
+
+    // Kandidaten für lokalen Pfad: Upload-Dir oder ABSPATH.
+    $candidates = [];
+    if (!empty($upload_dir['baseurl']) && strpos($url, $upload_dir['baseurl']) === 0) {
+        $candidates[] = $upload_dir['basedir'] . str_replace($upload_dir['baseurl'], '', $url);
+    }
+    if (defined('ABSPATH')) {
+        $candidates[] = rtrim(ABSPATH, '/') . '/' . $relative;
+    }
+
+    foreach ($candidates as $path) {
+        $real = realpath($path);
+        if (!$real || !is_file($real)) {
+            continue;
+        }
+        // Nur Bilder zulassen.
+        $ext = strtolower(pathinfo($real, PATHINFO_EXTENSION));
+        $mime_map = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'webp' => 'image/webp',
+        ];
+        if (!isset($mime_map[$ext])) {
+            return '';
+        }
+        $data = @file_get_contents($real);
+        if ($data === false) {
+            return '';
+        }
+        return 'data:' . $mime_map[$ext] . ';base64,' . base64_encode($data);
+    }
+
+    return '';
+}
+
+/**
  * Aktueller Token (HMAC-SHA256). Neu generierte URLs verwenden diesen.
  */
 function ab_generate_contract_pdf_token($order_id) {

@@ -14,27 +14,31 @@ class AB_Gutschein_PDF {
      */
     public static function build_html( $coupon_code, $amount, $expiry_date, $message = '', $sender_name = '' ) {
 
-        // Logo (gleicher Pattern wie AB_Contract_PDF)
-        $logo_html = '';
+        // Logo als data:-URI inlinen (DomPDF läuft mit isRemoteEnabled=false).
+        $logo_html    = '';
+        $logo_data    = '';
         $divi_options = get_option( 'et_divi' );
         if ( ! empty( $divi_options['divi_logo'] ) ) {
-            $logo_html = '<img src="' . esc_url( $divi_options['divi_logo'] ) . '" style="max-height: 40px;" />';
-        } elseif ( function_exists( 'et_get_option' ) ) {
+            $logo_data = ab_inline_local_image( $divi_options['divi_logo'] );
+        }
+        if ( empty( $logo_data ) && function_exists( 'et_get_option' ) ) {
             $logo = et_get_option( 'divi_logo' );
             if ( ! empty( $logo ) ) {
-                $logo_html = '<img src="' . esc_url( $logo ) . '" style="max-height: 40px;" />';
+                $logo_data = ab_inline_local_image( $logo );
             }
         }
-        if ( empty( $logo_html ) ) {
+        if ( empty( $logo_data ) ) {
             $custom_logo_id = get_theme_mod( 'custom_logo' );
             if ( $custom_logo_id ) {
                 $logo_url = wp_get_attachment_image_url( $custom_logo_id, 'medium' );
                 if ( $logo_url ) {
-                    $logo_html = '<img src="' . esc_url( $logo_url ) . '" style="max-height: 40px;" />';
+                    $logo_data = ab_inline_local_image( $logo_url );
                 }
             }
         }
-        if ( empty( $logo_html ) ) {
+        if ( ! empty( $logo_data ) ) {
+            $logo_html = '<img src="' . esc_attr( $logo_data ) . '" style="max-height: 40px;" />';
+        } else {
             $logo_html = '<span style="font-size:22px;font-weight:700;color:#1d1d1f;">' . esc_html( get_bloginfo( 'name' ) ) . '</span>';
         }
 
@@ -151,7 +155,7 @@ class AB_Gutschein_PDF {
         require_once $dompdf_autoload_path;
 
         $options = new Options();
-        $options->setIsRemoteEnabled( true );
+        $options->setIsRemoteEnabled( false );
         $dompdf = new Dompdf( $options );
         $dompdf->loadHtml( $html );
         $dompdf->setPaper( 'A4', 'landscape' );

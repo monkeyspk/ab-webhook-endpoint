@@ -282,26 +282,22 @@ class AB_Contract_PDF {
             <!-- Fester Header (auf allen Seiten) – nur Logo -->
             <div class="right">
                 <?php
-                // Methode für Divi Theme Logo
+                // Logo als data:-URI inlinen (DomPDF läuft mit isRemoteEnabled=false).
                 $divi_options = get_option('et_divi');
-
+                $logo_data    = '';
                 if (!empty($divi_options['divi_logo'])) {
-                    // Divi speichert die URL des Logos direkt in den Optionen
-                    echo '<img src="' . esc_url($divi_options['divi_logo']) . '" alt="' . get_bloginfo('name') . '" />';
-                } else {
-                    // Alternative Methode: Versuche es mit der ET-Funktion, falls verfügbar
-                    if (function_exists('et_get_option')) {
-                        $logo = et_get_option('divi_logo');
-                        if (!empty($logo)) {
-                            echo '<img src="' . esc_url($logo) . '" alt="' . get_bloginfo('name') . '" />';
-                        } else {
-                            // Fallback auf den Seitennamen
-                            echo '<span>' . get_bloginfo('name') . '</span>';
-                        }
-                    } else {
-                        // Fallback auf den Seitennamen
-                        echo '<span>' . get_bloginfo('name') . '</span>';
+                    $logo_data = ab_inline_local_image($divi_options['divi_logo']);
+                }
+                if (empty($logo_data) && function_exists('et_get_option')) {
+                    $logo = et_get_option('divi_logo');
+                    if (!empty($logo)) {
+                        $logo_data = ab_inline_local_image($logo);
                     }
+                }
+                if (!empty($logo_data)) {
+                    echo '<img src="' . esc_attr($logo_data) . '" alt="' . esc_attr(get_bloginfo('name')) . '" />';
+                } else {
+                    echo '<span>' . esc_html(get_bloginfo('name')) . '</span>';
                 }
                 ?>
             </div>
@@ -591,7 +587,7 @@ class AB_Contract_PDF {
         require_once $dompdf_autoload_path;
 
         $options = new Options();
-        $options->setIsRemoteEnabled( true );
+        $options->setIsRemoteEnabled( false );
         $dompdf = new Dompdf( $options );
         $dompdf->loadHtml( $html );
         $dompdf->setPaper( 'A4', 'portrait' );

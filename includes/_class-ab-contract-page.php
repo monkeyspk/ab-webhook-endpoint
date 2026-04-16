@@ -200,7 +200,7 @@ class AB_Contract_Page {
         try {
             // DomPDF Optionen setzen
             $options = new Options();
-            $options->setIsRemoteEnabled(true);
+            $options->setIsRemoteEnabled(false);
             $options->setIsHtml5ParserEnabled(true);
 
             $dompdf = new Dompdf($options);
