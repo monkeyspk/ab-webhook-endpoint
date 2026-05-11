@@ -179,22 +179,14 @@ function ab_get_order_event_type($order) {
         }
     }
 
-    // Drittens: Theme-Angebote-Flow — Angebot-ID via Produkt-Meta auflösen, dann
-    // Event-Type aus den AB-Import-Flags ableiten (NICHT aus der user-editierbaren
-    // angebot_kategorie-Taxonomy — die könnte jemand auf "kostenlos" oder "camp"
-    // umbenennen und das Status-Routing wäre tot). Die `_angebot_is_*`-Meta-Flags
-    // werden direkt aus AB's API-Response gesetzt (is_workshop, is_course) und sind
-    // user-resistent: kein UI im WP-Admin schreibt diese. Bei jedem Cron-Import
-    // werden sie überschrieben → selbstheilend.
+    // Drittens: Theme-Angebote-Flow — 3-Layer-Detection für die Angebot-ID
+    // (Order-Item-Meta direkt → Produkt-Meta → Reverse-Lookup mit Backfill),
+    // dann Event-Type aus den AB-Quell-Flags ableiten (NICHT aus der user-
+    // editierbaren angebot_kategorie-Taxonomy). Helper liegt in ab_get_angebot_id_for_order_item.
     foreach ($order->get_items() as $item) {
-        if (!method_exists($item, 'get_product_id')) {
-            continue;
-        }
-        $product_id = $item->get_product_id();
-        if (!$product_id) {
-            continue;
-        }
-        $angebot_id = (int) get_post_meta($product_id, '_angebot_id', true);
+        $angebot_id = function_exists('ab_get_angebot_id_for_order_item')
+            ? ab_get_angebot_id_for_order_item($item)
+            : 0;
         if (!$angebot_id) {
             continue;
         }
@@ -217,6 +209,10 @@ function ab_get_order_event_type($order) {
         if (!is_wp_error($terms) && !empty($terms)) {
             return $terms[0];
         }
+
+        // Letzter Notnagel: wenn nichtmal die Taxonomy was sagt, default auf 'kurs'.
+        // Besser als "Bearbeitung" zu bleiben.
+        return 'kurs';
     }
 
     // Fallback: Event CPT Taxonomy prüfen

@@ -241,6 +241,55 @@ add_filter('woocommerce_order_is_paid_statuses', function($statuses) {
  * Erkennt sowohl Probetrainings (_event_participant_data) als auch
  * Workshops/Kurse (_event_is_workshop, _event_course_id).
  */
+/**
+ * Findet die Angebot-Post-ID für ein Order-Item durch 3 Fallback-Layer.
+ * Beim Reverse-Lookup-Treffer wird die Produkt→Angebot-Meta gleich backfilled,
+ * damit künftige Calls den schnelleren Pfad nehmen.
+ *
+ * @return int 0 wenn keine Verknüpfung gefunden
+ */
+function ab_get_angebot_id_for_order_item($item) {
+    // Layer 1: direkt auf dem Order-Item (für neue Orders nach Theme-Fix)
+    $direct = (int) $item->get_meta('_angebot_id');
+    if ($direct > 0) {
+        return $direct;
+    }
+
+    if (!method_exists($item, 'get_product_id')) {
+        return 0;
+    }
+    $product_id = (int) $item->get_product_id();
+    if (!$product_id) {
+        return 0;
+    }
+
+    // Layer 2: Produkt → Angebot via _angebot_id-Meta auf dem Produkt
+    $via_product = (int) get_post_meta($product_id, '_angebot_id', true);
+    if ($via_product > 0) {
+        return $via_product;
+    }
+
+    // Layer 3: Reverse-Lookup — finde Angebot wo _angebot_ferienkurs_produkt_id == $product_id
+    // (für Bestandsdaten ohne Vorwärts-Link). Backfillt den Produkt-Meta zur Selbstheilung.
+    $reverse = get_posts([
+        'post_type'      => 'angebot',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'meta_query'     => [[
+            'key'   => '_angebot_ferienkurs_produkt_id',
+            'value' => (string) $product_id,
+        ]],
+    ]);
+    if (!empty($reverse)) {
+        $angebot_id = (int) $reverse[0];
+        update_post_meta($product_id, '_angebot_id', $angebot_id);
+        return $angebot_id;
+    }
+
+    return 0;
+}
+
 function ab_order_is_event_booking($order) {
     if (!$order instanceof WC_Order) {
         return false;
@@ -257,15 +306,10 @@ function ab_order_is_event_booking($order) {
         if (!empty($item->get_meta('_event_course_id'))) {
             return true;
         }
-        // Theme-Angebote-Flow: WC-Produkt → Angebot-Post via _angebot_id-Meta.
-        // Greift auch für bestehende Orders (die Order-Items haben keine direkte
-        // angebot_id-Meta — der Theme-Handler `parkourone_angebot_order_item_meta`
-        // legt nur menschenlesbare "Angebot"/"Teilnehmer"-Labels an).
-        if (method_exists($item, 'get_product_id')) {
-            $product_id = $item->get_product_id();
-            if ($product_id && get_post_meta($product_id, '_angebot_id', true)) {
-                return true;
-            }
+        // Theme-Angebote-Flow (Kurse, Workshops, Ferienkurse) — bombensicher via
+        // 3-Layer-Detection inkl. Reverse-Lookup auf bestehende Daten.
+        if (ab_get_angebot_id_for_order_item($item) > 0) {
+            return true;
         }
     }
     return false;
