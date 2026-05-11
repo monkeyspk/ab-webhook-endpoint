@@ -179,18 +179,27 @@ function ab_get_order_event_type($order) {
         }
     }
 
-    // Drittens: Theme-Angebote-Flow — angebot_id auf Order-Item, Kategorie via Taxonomy
-    // (Slugs: 'workshop', 'kurs', 'ferienkurs', 'probetraining')
+    // Drittens: Theme-Angebote-Flow — Angebot-ID via Produkt-Meta auflösen, dann
+    // Kategorie via angebot_kategorie-Taxonomy. Greift auch für bestehende Orders
+    // weil der Theme-Order-Item-Handler keine direkte angebot_id-Meta speichert.
+    // Slugs: 'workshop', 'kurs', 'ferienkurs', 'probetraining' — passen direkt aufs
+    // Mapping in ab_map_event_type_to_status.
     foreach ($order->get_items() as $item) {
-        $angebot_id = $item->get_meta('angebot_id');
-        if (empty($angebot_id)) {
+        if (!method_exists($item, 'get_product_id')) {
             continue;
         }
-        $terms = wp_get_object_terms((int) $angebot_id, 'angebot_kategorie', ['fields' => 'slugs']);
+        $product_id = $item->get_product_id();
+        if (!$product_id) {
+            continue;
+        }
+        $angebot_id = (int) get_post_meta($product_id, '_angebot_id', true);
+        if (!$angebot_id) {
+            continue;
+        }
+        $terms = wp_get_object_terms($angebot_id, 'angebot_kategorie', ['fields' => 'slugs']);
         if (is_wp_error($terms) || empty($terms)) {
             continue;
         }
-        // Erster Kategorie-Slug ist der Event-Type — passt aufs Mapping in ab_map_event_type_to_status
         return $terms[0];
     }
 

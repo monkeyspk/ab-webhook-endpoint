@@ -257,12 +257,15 @@ function ab_order_is_event_booking($order) {
         if (!empty($item->get_meta('_event_course_id'))) {
             return true;
         }
-        // Theme-Angebote-Flow (Kurse/Workshops/Ferienkurse via parkourone_angebot_add_to_cart)
-        if (!empty($item->get_meta('angebot_id'))) {
-            return true;
-        }
-        if (!empty($item->get_meta('angebot_teilnehmer'))) {
-            return true;
+        // Theme-Angebote-Flow: WC-Produkt → Angebot-Post via _angebot_id-Meta.
+        // Greift auch für bestehende Orders (die Order-Items haben keine direkte
+        // angebot_id-Meta — der Theme-Handler `parkourone_angebot_order_item_meta`
+        // legt nur menschenlesbare "Angebot"/"Teilnehmer"-Labels an).
+        if (method_exists($item, 'get_product_id')) {
+            $product_id = $item->get_product_id();
+            if ($product_id && get_post_meta($product_id, '_angebot_id', true)) {
+                return true;
+            }
         }
     }
     return false;
