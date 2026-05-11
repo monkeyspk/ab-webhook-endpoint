@@ -180,10 +180,12 @@ function ab_get_order_event_type($order) {
     }
 
     // Drittens: Theme-Angebote-Flow — Angebot-ID via Produkt-Meta auflösen, dann
-    // Kategorie via angebot_kategorie-Taxonomy. Greift auch für bestehende Orders
-    // weil der Theme-Order-Item-Handler keine direkte angebot_id-Meta speichert.
-    // Slugs: 'workshop', 'kurs', 'ferienkurs', 'probetraining' — passen direkt aufs
-    // Mapping in ab_map_event_type_to_status.
+    // Event-Type aus den AB-Import-Flags ableiten (NICHT aus der user-editierbaren
+    // angebot_kategorie-Taxonomy — die könnte jemand auf "kostenlos" oder "camp"
+    // umbenennen und das Status-Routing wäre tot). Die `_angebot_is_*`-Meta-Flags
+    // werden direkt aus AB's API-Response gesetzt (is_workshop, is_course) und sind
+    // user-resistent: kein UI im WP-Admin schreibt diese. Bei jedem Cron-Import
+    // werden sie überschrieben → selbstheilend.
     foreach ($order->get_items() as $item) {
         if (!method_exists($item, 'get_product_id')) {
             continue;
@@ -196,11 +198,25 @@ function ab_get_order_event_type($order) {
         if (!$angebot_id) {
             continue;
         }
-        $terms = wp_get_object_terms($angebot_id, 'angebot_kategorie', ['fields' => 'slugs']);
-        if (is_wp_error($terms) || empty($terms)) {
-            continue;
+
+        // Primär: AB-Quell-Flags (autoritativ, weil direkt aus AB importiert)
+        if (get_post_meta($angebot_id, '_angebot_is_workshop', true) === '1') {
+            return 'workshop';
         }
-        return $terms[0];
+        if (get_post_meta($angebot_id, '_angebot_is_ferienkurs', true) === '1') {
+            return 'ferienkurs';
+        }
+        if (get_post_meta($angebot_id, '_angebot_is_kurs', true) === '1') {
+            return 'kurs';
+        }
+
+        // Fallback: Taxonomy (für manuell angelegte Angebote ohne AB-Import-Flags,
+        // ODER für ältere AB-Imports vor dem Meta-Flag-Rollout — Cron heilt das innert
+        // 10 Min).
+        $terms = wp_get_object_terms($angebot_id, 'angebot_kategorie', ['fields' => 'slugs']);
+        if (!is_wp_error($terms) && !empty($terms)) {
+            return $terms[0];
+        }
     }
 
     // Fallback: Event CPT Taxonomy prüfen
