@@ -179,6 +179,21 @@ function ab_get_order_event_type($order) {
         }
     }
 
+    // Drittens: Theme-Angebote-Flow — angebot_id auf Order-Item, Kategorie via Taxonomy
+    // (Slugs: 'workshop', 'kurs', 'ferienkurs', 'probetraining')
+    foreach ($order->get_items() as $item) {
+        $angebot_id = $item->get_meta('angebot_id');
+        if (empty($angebot_id)) {
+            continue;
+        }
+        $terms = wp_get_object_terms((int) $angebot_id, 'angebot_kategorie', ['fields' => 'slugs']);
+        if (is_wp_error($terms) || empty($terms)) {
+            continue;
+        }
+        // Erster Kategorie-Slug ist der Event-Type — passt aufs Mapping in ab_map_event_type_to_status
+        return $terms[0];
+    }
+
     // Fallback: Event CPT Taxonomy prüfen
     foreach ($order->get_items() as $item) {
         $product_id = $item->get_meta('_event_product_id');

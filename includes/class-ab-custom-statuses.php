@@ -246,6 +246,7 @@ function ab_order_is_event_booking($order) {
         return false;
     }
     foreach ($order->get_items() as $item) {
+        // Custom-Events-Plugin-Flow (alte Event-Buchungen via event_list.js)
         if (!empty($item->get_meta('_event_participant_data'))) {
             return true;
         }
@@ -254,6 +255,13 @@ function ab_order_is_event_booking($order) {
             return true;
         }
         if (!empty($item->get_meta('_event_course_id'))) {
+            return true;
+        }
+        // Theme-Angebote-Flow (Kurse/Workshops/Ferienkurse via parkourone_angebot_add_to_cart)
+        if (!empty($item->get_meta('angebot_id'))) {
+            return true;
+        }
+        if (!empty($item->get_meta('angebot_teilnehmer'))) {
             return true;
         }
     }
