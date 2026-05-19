@@ -410,9 +410,49 @@ class AB_Contract_Wizard {
             error_log('Kein Vertragstyp mit course_id ' . $event_course_id . ' gefunden - Fallback auf event_description');
         }
 
+        // NEU: Wenn Order-Item keine Description hat, hole sie frisch vom Klassen-Post
+        // via course_id. Selbstheilend gegenüber: AB-Re-Import hat description leer
+        // überschrieben, Bridge hat description nie aufs Item geschrieben, etc.
+        // Bei den Schulen sind Vertragstypen pro Altersgruppe organisiert (Kids,
+        // Juniors, Adults, Seniors, Masters) — die Zuordnung läuft IMMER über
+        // die Description am Klassen-Post, daher ist dies der eigentliche Hauptpfad.
+        if (empty($event_description) && !empty($event_course_id)) {
+            error_log("Description leer auf Order-Item — hole frisch via course_id={$event_course_id}");
+
+            // Versuch 1: Event-Post (Probetrainings, klassische Klassen)
+            $event_posts = get_posts([
+                'post_type'      => 'event',
+                'meta_key'       => '_event_course_id',
+                'meta_value'     => $event_course_id,
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'fields'         => 'ids',
+            ]);
+            if (!empty($event_posts)) {
+                $event_description = get_post_meta($event_posts[0], '_event_description', true);
+                error_log("Description aus Event-Post {$event_posts[0]} geladen: '{$event_description}'");
+            }
+
+            // Versuch 2: Angebot-Post (Kurse/Workshops/Ferienkurse)
+            if (empty($event_description)) {
+                $angebot_posts = get_posts([
+                    'post_type'      => 'angebot',
+                    'meta_key'       => '_angebot_course_id',
+                    'meta_value'     => $event_course_id,
+                    'post_status'    => 'publish',
+                    'posts_per_page' => 1,
+                    'fields'         => 'ids',
+                ]);
+                if (!empty($angebot_posts)) {
+                    $event_description = get_post_meta($angebot_posts[0], '_angebot_kurzbeschreibung', true);
+                    error_log("Description aus Angebot-Post {$angebot_posts[0]} geladen: '{$event_description}'");
+                }
+            }
+        }
+
         // FALLBACK: Suche nach event_description (für Kompatibilität)
         if (empty($event_description)) {
-            error_log('No event description found in order');
+            error_log('No event description found in order — auch via course_id-Resolver nichts gefunden');
             return false;
         }
 
