@@ -157,7 +157,16 @@ class AB_Gutschein_Balance {
             return $label;
         }
 
+        // Gespeichertes Restguthaben des Coupons (wird erst NACH Zahlung reduziert).
         $remaining = floatval($coupon->get_amount());
+
+        // Den im aktuellen Warenkorb bereits eingeloesten Betrag dieses Coupons abziehen,
+        // damit das angezeigte Restguthaben den Betrag NACH diesem Kauf widerspiegelt.
+        if (function_exists('WC') && WC()->cart) {
+            $cart_discount = floatval(WC()->cart->get_coupon_discount_amount($coupon->get_code()));
+            $remaining = max(0, $remaining - $cart_discount);
+        }
+
         return sprintf(
             '%s <small>(Restguthaben: %s &euro;)</small>',
             $label,
