@@ -54,6 +54,22 @@ class AB_Custom_Statuses {
         }
         // Filter: fügt Custom-Statuses zum Dropdown in WooCommerce hinzu
         add_filter('wc_order_statuses', [__CLASS__, 'add_to_wc_order_statuses']);
+
+        // FIX: WooCommerce Core registriert wc_update_coupon_usage_counts() nur auf den
+        // Standard-Status (pending/processing/completed/on-hold/cancelled/failed/trash).
+        // Unsere Bestellungen landen aber direkt auf Custom-Status (wc-probetraining,
+        // wc-gutschein, wc-schuelerin, wc-nichterschienen ...), daher wird der native
+        // Coupon-Nutzungszähler (usage_count) nie hochgezählt -> zeigt 0 trotz Einlösung.
+        // Wir registrieren denselben Core-Callback auf jeden Custom-Status-Übergang.
+        // wc_update_coupon_usage_counts() ist idempotent (Order-Meta _recorded_coupon_usage_counts)
+        // und behandelt nur cancelled/failed/trash als "invalid" -> dort wird korrekt dekrementiert.
+        if (function_exists('wc_update_coupon_usage_counts')) {
+            foreach (self::get_custom_statuses() as $status_slug => $status_label) {
+                // Dynamischer Hook nutzt den Slug OHNE "wc-"-Präfix.
+                $status_key = preg_replace('/^wc-/', '', $status_slug);
+                add_action('woocommerce_order_status_' . $status_key, 'wc_update_coupon_usage_counts');
+            }
+        }
     }
 
     /**
