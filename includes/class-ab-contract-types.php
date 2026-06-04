@@ -282,9 +282,17 @@ class AB_Contract_Types {
         }
 
         // HTML Felder speichern
+        // WICHTIG: Ein leer uebermitteltes Feld NICHT speichern. Die wp_editor-Instanzen
+        // liegen in eingeklappten Accordions (.accordion-content ist per CSS versteckt);
+        // ein versteckter TinyMCE-Editor synchronisiert seinen Inhalt im Visual-Tab nicht
+        // immer zurueck ins <textarea> (v.a. Firefox) -> das Feld kaeme leer an und wuerde
+        // sonst die gespeicherte Beschreibung mit '' ueberschreiben (Datenverlust, keine Revisions).
         foreach (self::$html_fields as $field) {
             if (isset($_POST[$field])) {
-                update_post_meta($post_id, '_' . $field, wp_kses_post($_POST[$field]));
+                $value = wp_kses_post($_POST[$field]);
+                if (trim($value) !== '') {
+                    update_post_meta($post_id, '_' . $field, $value);
+                }
             }
         }
     }
