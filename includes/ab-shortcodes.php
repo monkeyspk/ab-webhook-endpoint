@@ -513,6 +513,31 @@ add_shortcode('contract_link', 'ab_sc_contract_link');
 
 
 /**
+ * Hilfsfunktion: liefert die ROHEN (un-escapeten) Zugangsdaten-Bestandteile
+ * des ersten Teilnehmers + rohes Event-Datum aus der aktuellen Bestellung.
+ *
+ * Wichtig: hier bewusst KEIN esc_html(), sonst landen Sonderzeichen aus Namen
+ * als HTML-Entities (' -> &#039;, & -> &amp;) im Login/Passwort.
+ */
+function ab_we_first_participant_credentials() {
+    global $ab_current_order;
+    if (!$ab_current_order) return null;
+
+    foreach ($ab_current_order->get_items() as $item) {
+        $participants = $item->get_meta('_event_participant_data');
+        if (!empty($participants) && is_array($participants)) {
+            $p = reset($participants);
+            return [
+                'vorname'    => isset($p['vorname']) ? (string) $p['vorname'] : '',
+                'name'       => isset($p['name']) ? (string) $p['name'] : '',
+                'event_date' => (string) $item->get_meta('_event_date'),
+            ];
+        }
+    }
+    return null;
+}
+
+/**
  * Shortcode: [ab_academy_username]
  */
 function ab_sc_academy_username() {
@@ -521,12 +546,17 @@ function ab_sc_academy_username() {
 
     $order_id = $ab_current_order->get_id();
 
-    $first_name = ab_first_participant_first_name();
-    $last_name = ab_first_participant_last_name();
+    $data = ab_we_first_participant_credentials();
+    if (!$data) return '';
+
+    $first_name = $data['vorname'];
+    $last_name  = $data['name'];
 
     if (empty($first_name) || empty($last_name)) return '';
 
-    return strtolower($first_name . $last_name . '#' . $order_id);
+    // mb_strtolower (UTF-8) statt strtolower(): ASCII-strtolower laesst Grossumlaute
+    // (Ae/Oe/Ue) gross -> Login wuerde abweichen. Rohwerte ohne esc_html-Entities.
+    return mb_strtolower($first_name . $last_name . '#' . $order_id, 'UTF-8');
 }
 add_shortcode('ab_academy_username', 'ab_sc_academy_username');
 
@@ -537,13 +567,18 @@ function ab_sc_academy_password() {
     global $ab_current_order;
     if (!$ab_current_order) return '';
 
-    $first_name = ab_first_participant_first_name();
-    $last_name = ab_first_participant_last_name();
-    $event_date = ab_sc_event_date();
+    $data = ab_we_first_participant_credentials();
+    if (!$data) return '';
+
+    $first_name = $data['vorname'];
+    $last_name  = $data['name'];
+    $event_date = $data['event_date'];
 
     if (empty($first_name) || empty($last_name) || empty($event_date)) return '';
 
-    return strtolower($first_name . $last_name . '#' . $event_date);
+    // mb_strtolower (UTF-8) + Rohwerte: behebt Umlaut-Grossschreibung und
+    // HTML-Entity-Verfaelschung (z.B. Foertsch, Waefler, Matias).
+    return mb_strtolower($first_name . $last_name . '#' . $event_date, 'UTF-8');
 }
 add_shortcode('ab_academy_password', 'ab_sc_academy_password');
 
