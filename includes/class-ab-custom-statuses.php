@@ -517,7 +517,6 @@ function ab_redirect_order_to_event_status($order_id, $order) {
     // Handler temporär entfernen um Endlosschleifen zu vermeiden
     remove_action('woocommerce_order_status_completed', 'ab_redirect_order_to_event_status', 999);
     remove_action('woocommerce_order_status_processing', 'ab_redirect_order_to_event_status', 999);
-    remove_action('woocommerce_order_status_on-hold', 'ab_redirect_order_to_event_status', 999);
 
     // Status setzen
     $order->update_status($target_status, "Automatisch auf {$target_status} gesetzt (Teilnehmerdaten vorhanden)");
@@ -525,15 +524,10 @@ function ab_redirect_order_to_event_status($order_id, $order) {
     // Handler wieder hinzufügen
     add_action('woocommerce_order_status_completed', 'ab_redirect_order_to_event_status', 999, 2);
     add_action('woocommerce_order_status_processing', 'ab_redirect_order_to_event_status', 999, 2);
-    add_action('woocommerce_order_status_on-hold', 'ab_redirect_order_to_event_status', 999, 2);
 }
 
 add_action('woocommerce_order_status_completed', 'ab_redirect_order_to_event_status', 999, 2);
 add_action('woocommerce_order_status_processing', 'ab_redirect_order_to_event_status', 999, 2);
-// BACS/Vorkasse-Buchungen landen auf "on-hold" (Zahlung noch ausstehend) und
-// lösen weder payment_complete noch processing/completed aus → ohne diesen Hook
-// erreichen sie nie einen Event-Status und werden nicht ins AcademyBoard übertragen.
-add_action('woocommerce_order_status_on-hold', 'ab_redirect_order_to_event_status', 999, 2);
 
 // Verhindere das Senden von E-Mails, wenn der Skip-Marker gesetzt ist
 add_filter('woocommerce_email_enabled_customer_on_hold_order', 'ab_check_skip_email_marker', 10, 2);
