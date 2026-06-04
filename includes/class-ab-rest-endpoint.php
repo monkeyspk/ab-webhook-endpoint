@@ -88,7 +88,23 @@ class AB_Rest_Endpoint {
             ];
             $status_label = isset($status_labels[$new_status]) ? $status_labels[$new_status] : $new_status;
 
-            if ($contract_status !== 'completed') {
+            // RE-AKTIVIERUNG: _contract_status wird bei einem Reset auf
+            // "vertragverschickt"/"bkdvertrag" gelöscht (siehe AB_Email_Sender::
+            // reset_email_marker_on_status_change). Ein früher abgeschlossener
+            // Vertrag bleibt aber als PDF bzw. als bereits versendete
+            // Schüler_in-/Bestandskunde-akzeptiert-E-Mail belegbar. In diesem
+            // Fall ist die Wieder-Heraufstufung (z.B. Gekündigt → Schüler_in)
+            // legitim und darf nicht mit 403 blockiert werden.
+            $contract_pdf = get_post_meta($order_id, '_ab_contract_pdf', true);
+            $has_contract_pdf = !empty($contract_pdf) && file_exists($contract_pdf);
+            $schuelerin_mail_sent = get_post_meta($order_id, '_ab_email_sent_schuelerin', true) === 'yes';
+            $bestandkundeakz_mail_sent = get_post_meta($order_id, '_ab_email_sent_bestandkundeakz', true) === 'yes';
+            $contract_completed = ($contract_status === 'completed')
+                || $has_contract_pdf
+                || $schuelerin_mail_sent
+                || $bestandkundeakz_mail_sent;
+
+            if (!$contract_completed) {
                 error_log(sprintf(
                     '[AB REST API] ABGELEHNT: Status-Änderung auf "%s" für Order #%d verweigert. ' .
                     'Grund: Kein abgeschlossener Vertrag vorhanden (_contract_status = "%s")',
