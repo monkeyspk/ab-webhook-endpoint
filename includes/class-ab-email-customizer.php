@@ -1743,7 +1743,7 @@ Viele Grüsse']); ?></td>
             esc_attr($value),
             esc_attr($args['placeholder'])
         );
-        echo '<p class="description">Verfügbare Platzhalter: {first_name}, {last_name}, {order_number}, {status} + beliebige Shortcodes wie [ab_event_date]</p>';
+        echo '<p class="description"><strong>Geschweifte Klammern { } = Bestell-/Elternteil-Daten:</strong> {first_name} (Vorname Elternteil), {last_name} (Nachname Elternteil), {order_number} (Bestellnummer), {status} (Status).<br><strong>Eckige Klammern [ ] = Teilnehmer-/Event-Daten:</strong> z. B. [first_participant_first_name] (Vorname Teilnehmer), [ab_event_date], [ab_event_participants]. Die beiden Notationen sind NICHT austauschbar – sie ziehen unterschiedliche Datenquellen.</p>';
     }
 
     public function render_wysiwyg_field($args) {
@@ -1766,7 +1766,7 @@ Viele Grüsse']); ?></td>
                 'quicktags'     => true
             ]
         );
-        echo '<p class="description">Verfügbare Platzhalter: {first_name}, {last_name}, {order_number}, {status} + Shortcodes ([ab_event_date], [ab_participants], etc.)</p>';
+        echo '<p class="description"><strong>Geschweifte Klammern { } = Bestell-/Elternteil-Daten:</strong> {first_name} (Vorname Elternteil), {last_name} (Nachname Elternteil), {order_number} (Bestellnummer), {status} (Status).<br><strong>Eckige Klammern [ ] = Teilnehmer-/Event-Daten:</strong> z. B. [first_participant_first_name] (Vorname Teilnehmer), [ab_event_date], [ab_event_participants]. Die beiden Notationen sind NICHT austauschbar – sie ziehen unterschiedliche Datenquellen.</p>';
     }
 
 
