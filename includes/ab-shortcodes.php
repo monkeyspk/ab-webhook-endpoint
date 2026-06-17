@@ -32,6 +32,27 @@ function ab_we_get_first_event_item(\WC_Order $order) {
 }
 
 /**
+ * Loese die event-CPT-Post-ID hinter einem Bestellposten auf:
+ * Item -> _event_product_id (Fallback get_product_id()) -> Produkt _event_id.
+ * Gibt 0 zurueck, wenn ein Glied der Kette fehlt. Damit greifen die
+ * Multi-Termin-Shortcodes (Zeit, Telefon, all_dates) auf dieselbe Quelle zu.
+ */
+function ab_we_get_event_id_from_item($item) {
+    if (!$item) {
+        return 0;
+    }
+    $product_id = $item->get_meta('_event_product_id');
+    if (!$product_id) {
+        $product_id = $item->get_product_id();
+    }
+    if (!$product_id) {
+        return 0;
+    }
+    $event_id = get_post_meta($product_id, '_event_id', true);
+    return $event_id ? (int) $event_id : 0;
+}
+
+/**
  * 2) Shortcode: [ab_event_title]
  */
 function ab_sc_event_title() {
@@ -91,7 +112,33 @@ function ab_sc_event_time() {
     $item = ab_we_get_first_event_item($ab_current_order);
     if (!$item) return '';
 
-    return esc_html($item->get_meta('_event_time'));
+    // Workshops/Ferienkurse haben mehrere Termine mit unterschiedlichen Zeiten;
+    // ein einzelnes _event_time-Item-Meta ist dann nicht aussagekraeftig.
+    // Zeiten aus _event_dates aggregieren (deduped, in Termin-Reihenfolge).
+    $event_id = ab_we_get_event_id_from_item($item);
+    $dates    = $event_id ? get_post_meta($event_id, '_event_dates', true) : [];
+    if (is_array($dates) && $dates) {
+        // _event_dates liefert Zeiten als "HH:MM:SS" — Sekunden kappen,
+        // damit z.B. ein 1-Termin-Kurs identisch zum Item-Meta "18:15 - 20:15" bleibt.
+        $hm = function ($t) {
+            $t = trim((string) $t);
+            return (strlen($t) === 8) ? substr($t, 0, 5) : $t;
+        };
+        $times = [];
+        foreach ($dates as $d) {
+            $s = !empty($d['start_time']) ? $hm($d['start_time']) : '';
+            $e = !empty($d['end_time'])   ? $hm($d['end_time'])   : '';
+            if ($s !== '' && $e !== '') {
+                $times[] = $s . ' - ' . $e;
+            } elseif ($s !== '') {
+                $times[] = $s;
+            }
+        }
+        $times = array_values(array_unique($times));
+        if ($times) return esc_html(implode(', ', $times));
+    }
+
+    return esc_html($item->get_meta('_event_time'));  // Fallback: Single-Meta
 }
 add_shortcode('ab_event_time', 'ab_sc_event_time');
 
@@ -116,12 +163,17 @@ add_shortcode('ab_event_time', 'ab_sc_event_time');
          if (empty($lng)) $lng = $item->get_meta('_event_venue_lng');
      }
 
+     // Mit Koordinaten -> Punkt-Link; ohne (z.B. Workshops) -> Adress-Query-Link.
+     // So ist die Location in der Mail immer klickbar statt nur Klartext.
      if (!empty($venue) && !empty($lat) && !empty($lng)) {
          $maps_url = sprintf('https://www.google.com/maps?q=%s,%s', $lat, $lng);
-         return sprintf('<a href="%s" target="_blank">%s</a>', esc_url($maps_url), esc_html($venue));
+     } elseif (!empty($venue)) {
+         $maps_url = 'https://www.google.com/maps?q=' . rawurlencode($venue);
+     } else {
+         return '';
      }
 
-     return esc_html($venue);
+     return sprintf('<a href="%s" target="_blank">%s</a>', esc_url($maps_url), esc_html($venue));
  }
 
 add_shortcode('ab_event_location', 'ab_sc_event_location');
@@ -178,7 +230,18 @@ function ab_sc_event_coach_phone() {
     $item = ab_we_get_first_event_item($ab_current_order);
     if (!$item) return '';
 
-    return esc_html($item->get_meta('_event_coach_phone'));
+    $phone = $item->get_meta('_event_coach_phone');
+    if (empty($phone)) {
+        // Bei Workshops wird das Item-Meta nicht befuellt. Telefon aus dem
+        // event-CPT nachschlagen: _event_headcoach_phone (Quelle, aus der der
+        // Import auch das Item-Meta speist, vgl. class-ab-bestandskunden-import).
+        $event_id = ab_we_get_event_id_from_item($item);
+        if ($event_id) {
+            $phone = get_post_meta($event_id, '_event_headcoach_phone', true);
+        }
+    }
+
+    return esc_html($phone);
 }
 add_shortcode('ab_event_coach_phone', 'ab_sc_event_coach_phone');
 
@@ -715,13 +778,7 @@ function ab_sc_workshop_all_dates() {
     $item = ab_we_get_first_event_item($ab_current_order);
     if (!$item) return '';
 
-    $product_id = $item->get_meta('_event_product_id');
-    if (!$product_id) {
-        $product_id = $item->get_product_id();
-    }
-    if (!$product_id) return '';
-
-    $event_id = get_post_meta($product_id, '_event_id', true);
+    $event_id = ab_we_get_event_id_from_item($item);
     if (!$event_id) return '';
 
     $event_dates = get_post_meta($event_id, '_event_dates', true);
