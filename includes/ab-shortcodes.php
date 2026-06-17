@@ -805,11 +805,16 @@ function ab_sc_workshop_all_dates() {
         $weekday = $weekdays[(int)$date_obj->format('w')];
         $formatted_date = $date_obj->format('d.m.Y');
 
+        // Sekunden aus "HH:MM:SS" kappen (konsistent zu [ab_event_time]).
+        $hm = function ($t) {
+            $t = trim((string) $t);
+            return (strlen($t) === 8) ? substr($t, 0, 5) : $t;
+        };
         $time_str = '';
         if (!empty($d['start_time']) && !empty($d['end_time'])) {
-            $time_str = $d['start_time'] . ' - ' . $d['end_time'];
+            $time_str = $hm($d['start_time']) . ' - ' . $hm($d['end_time']);
         } elseif (!empty($d['start_time'])) {
-            $time_str = $d['start_time'];
+            $time_str = $hm($d['start_time']);
         }
 
         $output .= '<li style="padding: 4px 0;">';
